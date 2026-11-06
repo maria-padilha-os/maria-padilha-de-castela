@@ -1,7 +1,7 @@
 # Maria Padilha de Castela
 
-**Private** cybersecurity desktop image. This is an authorized-lab tool, not a
-general-purpose distribution.
+Public-source cybersecurity desktop image. Release builds remain private. This is
+an authorized-lab tool, not a general-purpose distribution.
 
 It is planned as an Arch/BlackArch or Archiso + Calamares build with exclusive
 security panels (Nmap, SET, Wireshark/forensics, isolated lab VMs). Do not

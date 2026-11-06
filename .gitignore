@@ -1,0 +1,6 @@
+.scratch/
+out/
+*.iso
+*.img
+*.pkg.tar.zst
+.env

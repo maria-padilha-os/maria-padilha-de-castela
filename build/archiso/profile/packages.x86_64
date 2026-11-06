@@ -1,0 +1,53 @@
+# Package manifest for the minimal reference build.
+#
+# This is an allowlist. Adding a package requires:
+#   1. review against docs/policy/authorized-use.md;
+#   2. a license/export review per docs/policy/legal-licensing-export.md;
+#   3. a recorded version in the release manifest; and
+#   4. tests/all.sh passing.
+#
+# Desktop and panel packages come from the maria-padilha-de build. They are
+# intentionally not duplicated here; this manifest is the base + installer +
+# security scope only.
+
+# Arch base
+base
+linux
+linux-firmware
+intel-ucode
+amd-ucode
+mkinitcpio
+sudo
+networkmanager
+iwd
+openssh
+git
+gnupg
+vim
+nano
+less
+man-db
+pacman-contrib
+archlinux-keyring
+
+# BlackArch package trust and mirror configuration
+blackarch-keyring
+blackarch-mirrorlist
+
+# Installer
+calamares
+
+# Reviewed security tools: network analysis, forensics, isolated lab
+nmap
+wireshark-qt
+sleuthkit
+qemu-desktop
+libvirt
+virt-manager
+edk2-ovmf
+firejail
+
+# Explicitly not included in the reference build:
+#   set, gophish, evilginx, mimikatz, lazagne, responder, and any other
+#   phishing-template or credential-theft package. See the denylist in
+#   denylist.txt and the policy review in docs/policy/authorized-use.md.

@@ -1,0 +1,13 @@
+AUTHORIZED USE ONLY
+
+Maria Padilha de Castela is an authorized-lab tool. Use it only on owned
+systems or systems for which you have explicit, written permission to test.
+Unauthorized access, scanning of third-party systems, phishing, and credential
+theft are prohibited and may be illegal.
+
+No scans run by default. You must define an explicit target scope before
+running any tool. Stop and clear the scope when you are done.
+
+The full boundary is documented in the project at
+docs/policy/authorized-use.md. By continuing, you confirm that you have
+authorization for every target you use this image against.

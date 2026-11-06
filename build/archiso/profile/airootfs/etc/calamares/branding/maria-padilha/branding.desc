@@ -1,0 +1,19 @@
+# Text-only branding for the reference build.
+# The desktop repository supplies logo/image assets for the final image.
+
+---
+componentName: maria-padilha-de-castela
+
+welcomeStyleCalamares: true
+
+strings:
+    productName: "Maria Padilha de Castela - Authorized Lab Use Only"
+    shortProductName: "Maria Padilha"
+    version: "reference"
+    shortVersion: "ref"
+    versionedName: "Maria Padilha de Castela (reference build)"
+    shortVersionedName: "Maria Padilha reference"
+    bootloaderEntryName: "Maria Padilha"
+    productUrl: "https://github.com/maria-padilha-os/maria-padilha-de-castela"
+    supportUrl: "https://github.com/maria-padilha-os/maria-padilha-de-castela/issues"
+    releaseNotesUrl: "https://github.com/maria-padilha-os/maria-padilha-de-castela"

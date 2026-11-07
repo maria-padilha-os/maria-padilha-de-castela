@@ -1,0 +1,15 @@
+[terminal]
+vt = 1
+
+# Live image: enter Hyprland as the unprivileged maria user. Logging out drops
+# back to tuigreet, which lists the Maria Padilha session installed by the
+# maria-padilha package at /usr/share/wayland-sessions/.
+[initial_session]
+command = "hyprland"
+user = "maria"
+
+# greetd + tuigreet is the only greeter supported by this profile. Keep this
+# file, packages.x86_64 and the enabled unit in sync.
+[default_session]
+command = "tuigreet --time --remember --remember-user-session --sessions /usr/share/wayland-sessions --greeting 'Maria Padilha de Castela'"
+user = "greeter"

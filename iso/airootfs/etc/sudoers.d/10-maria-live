@@ -1,0 +1,3 @@
+# Live media only: the unprivileged maria account has no password and may use
+# sudo for installer and recovery work. This file is not used off the ISO.
+maria ALL=(ALL:ALL) ALL

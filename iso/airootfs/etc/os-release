@@ -1,0 +1,6 @@
+NAME="Maria Padilha de Castela"
+ID=maria-padilha-de-castela
+PRETTY_NAME="Maria Padilha de Castela (private authorized-lab image)"
+VERSION_ID="0.1.0"
+HOME_URL="https://github.com/maria-padilha-os/maria-padilha-de-castela"
+PRIVATE_IMAGE="true"

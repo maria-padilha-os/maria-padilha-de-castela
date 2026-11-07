@@ -204,5 +204,10 @@ else
   echo "ok no obvious tracked secret"
 fi
 rm -f /tmp/secret-scan.$$
-
+if bash tests/iso.sh; then
+  echo "ok tests/iso.sh"
+else
+  echo "FAIL tests/iso.sh"
+  fail=1
+fi
 [ "$fail" -eq 0 ]

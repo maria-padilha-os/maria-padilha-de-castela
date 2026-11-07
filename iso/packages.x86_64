@@ -1,0 +1,117 @@
+# Runtime packages installed into the private Maria Padilha de Castela live
+# root. Build tooling stays in the throw-away Arch container.
+#
+# This is an allowlist. Adding a package requires review against the
+# authorized-use boundary and the private release policy.
+
+# Base system and archiso boot support
+base
+linux
+linux-firmware
+intel-ucode
+amd-ucode
+mkinitcpio-archiso
+squashfs-tools
+syslinux
+zstd
+
+# Live user, recovery and diagnostics
+sudo
+arch-install-scripts
+parted
+gptfdisk
+e2fsprogs
+dosfstools
+git
+gnupg
+openssh
+vim
+nano
+less
+man-db
+pacman-contrib
+
+# Networking and Bluetooth
+networkmanager
+network-manager-applet
+wpa_supplicant
+wireless-regdb
+iw
+bluez
+bluez-utils
+
+# Audio
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+alsa-utils
+pavucontrol
+
+# Mandatory core desktop: Hyprland + Quickshell and the Maria Padilha session
+hyprland
+quickshell
+qt6-base
+qt6-declarative
+qt6-wayland
+qt6-svg
+xdg-desktop-portal
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+xdg-utils
+xdg-user-dirs
+polkit
+polkit-gnome
+gnome-keyring
+gsettings-desktop-schemas
+hyprlock
+hypridle
+hyprsunset
+playerctl
+grim
+slurp
+swappy
+wl-clipboard
+cliphist
+fuzzel
+brightnessctl
+trash-cli
+jq
+micro
+ttf-jetbrains-mono-nerd
+ttf-nerd-fonts-symbols
+noto-fonts
+noto-fonts-emoji
+otf-font-awesome
+ttf-dejavu
+
+# Display manager: greetd + tuigreet only.
+greetd
+greetd-tuigreet
+
+# Minimal reviewed security baseline: network analysis, forensics, isolated lab.
+# These tools are installed for explicit, user-initiated lab work. Nothing is
+# configured to scan, capture, or touch a target automatically.
+nmap
+wireshark-qt
+tcpdump
+sleuthkit
+testdisk
+qemu-desktop
+libvirt
+virt-manager
+edk2-ovmf
+firejail
+
+# Repository keyrings and mirror metadata.
+archlinux-keyring
+blackarch-keyring
+blackarch-mirrorlist
+
+# The desktop package is supplied from the private Maria Padilha build. The
+# profile does not carry a second copy of the shell.
+maria-padilha
+
+# Explicitly excluded: set, gophish, evilginx, mimikatz, lazagne, responder,
+# king-phisher, modlishka and any other phishing-template or credential-theft
+# package. See denylist.txt and the private release policy.

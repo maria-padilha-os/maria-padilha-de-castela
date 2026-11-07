@@ -1,0 +1,12 @@
+# BlackArch repository keyring fingerprints
+# Extracted from blackarch-keyring-20251011.tar.gz (SHA-512 verified against
+# the upstream PKGBUILD). This is public key material only.
+#
+# fingerprint                                      uid
+4345771566D76038C7FEB43863EC0ADBEA87E4E3  Evan Teitelman <teitelmanevan@gmail.com>
+5E210889BBB5C48500E0C4F9C75E985FF8B993B4  Javier 'nrz' (BlackArch Developer) <nrz@nullsecurity.net>
+8F9A9793CB8591147C2EC70566E0CDBD1E01F333  Evan Teitelman (BlackArch Master) <teitelmanevan@gmail.com>
+A0917C4147A37007CB54C1CFD295AA940EFDDF62  Javier 'nrz' (BlackArch Master) <nrz@nullsecurity.net>
+CBA3C7D4798912702DCF568E67D8BDF42AD93F4E  Levon 'noptrix' Kayan (BlackArch Master) <noptrix@nullsecurity.net>
+F6DA3545F655964DD9177918C65009B64EB7BB3C  Evan Teitelman (BlackArch Developer) <teitelmanevan@gmail.com>
+F9A6E68A711354D84A9B91637533BAFE69A25079  Levon 'noptrix' Kayan (BlackArch Developer) <noptrix@nullsecurity.net>

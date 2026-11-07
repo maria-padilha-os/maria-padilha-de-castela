@@ -1,0 +1,37 @@
+# Trusted repository keyrings
+
+The profile trusts two repository keyrings. Both are installed as packages in
+`iso/packages.x86_64`; no key material is copied from the build host.
+
+| input | pin | role |
+| --- | --- | --- |
+| `archlinux-keyring` | package from the `2026/11/01` Arch archive snapshot | verifies `[core]` and `[extra]` |
+| `blackarch-keyring` | `20251011-2`, SHA-512 `6ec9e038c0a877f8e666286112a871586ac5f02a4912a2e5d284530994226b6f01e647a2d98de4ec27c45ddee24097b9e823e443197eed8d05d135747199c774` | verifies `[blackarch]` |
+
+The verified public BlackArch keyring is also checked in at
+`pgp/blackarch.gpg`, and its master/developer fingerprints are listed in
+`blackarch-fingerprints.txt`. The file was extracted from the official
+`blackarch-keyring-20251011.tar.gz`; the bundled copy matches that tarball
+byte-for-byte.
+
+The BlackArch hash is the source tarball hash published in the upstream
+`blackarch-keyring` PKGBUILD. Re-check it against the package recipe before
+changing the pin.
+
+`iso/pacman.conf` sets `SigLevel = Required DatabaseOptional` for the options
+and for `[blackarch]`. A missing, expired, revoked, or mismatched signature is
+a build failure, not a reason to relax the policy.
+
+Before a release, record the verified key fingerprints in the private release
+record outside this repository. Do not commit a private signing key, a keyring
+export containing secret material, or a passphrase.
+
+Read-only verification commands inside the build container:
+
+```sh
+pacman -Q archlinux-keyring blackarch-keyring
+pacman-key --list-keys
+```
+
+Do not use `--populate` on a host as part of this repository's build. The
+container and mkarchiso own their disposable keyring.

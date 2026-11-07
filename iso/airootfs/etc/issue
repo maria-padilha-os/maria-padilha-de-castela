@@ -1,0 +1,9 @@
+AUTHORIZED USE ONLY
+Maria Padilha de Castela - private authorized-lab cybersecurity image
+
+Use this image only on owned systems, or on systems with explicit written permission.
+No scans run by default. No packet capture starts automatically.
+Nothing is sent to a network target unless you start a tool yourself.
+
+This image is private. Do not publish, upload, mirror, or redistribute the ISO
+or its build artifacts.

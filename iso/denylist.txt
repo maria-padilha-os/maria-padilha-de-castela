@@ -1,0 +1,16 @@
+# Packages that are not admitted to the private Maria Padilha de Castela
+# image. This list is a backstop; packages.x86_64 is the authoritative
+# allowlist. A package here can only be reconsidered through a policy review
+# that removes phishing templates and credential-capture functionality and
+# adds a test proving the removal.
+#
+# Match whole package names. Keep this file sorted.
+
+evilginx
+gophish
+king-phisher
+lazagne
+mimikatz
+modlishka
+responder
+set

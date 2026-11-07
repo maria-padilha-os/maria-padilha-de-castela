@@ -3,4 +3,6 @@ out/
 *.iso
 *.img
 *.pkg.tar.zst
+*.sha256
+*.sig
 .env

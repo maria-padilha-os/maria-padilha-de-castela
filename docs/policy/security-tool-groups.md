@@ -79,6 +79,11 @@ The following are **not shipped and not offered by the installer**:
 - network login brute-force tools such as Hydra or Medusa;
 - any package in [`iso/denylist.txt`](../../iso/denylist.txt).
 
+The private cyber frontend registers a SET tab for transparency, but the tab is
+`"policy.admitted": false`, renders no launch control, and cannot be started by
+the tool runner. A missing SET binary is just a missing-tool fallback; the
+frontend never installs or runs it.
+
 The Password Auditing group is deliberately offline-only: John the Ripper,
 Hashcat, Hashcat-utils, Crunch, Ophcrack, fcrackzip, pdfcrack, and Hashid work
 against files or hashes the operator already owns or is authorized to test.

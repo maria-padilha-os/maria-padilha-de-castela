@@ -1,0 +1,15 @@
+module MariaPadilha.Cyber
+singleton CyberTheme 1.0 CyberTheme.qml
+CyberShell 1.0 CyberShell.qml
+CyberTabBar 1.0 CyberTabBar.qml
+AuthorizationBanner 1.0 AuthorizationBanner.qml
+LabModeSwitch 1.0 LabModeSwitch.qml
+TargetScopeIndicator 1.0 TargetScopeIndicator.qml
+StopClearAction 1.0 StopClearAction.qml
+ToolPanelFrame 1.0 ToolPanelFrame.qml
+ToolUnavailable 1.0 ToolUnavailable.qml
+RunButton 1.0 RunButton.qml
+NmapPanel 1.0 NmapPanel.qml
+SetPanel 1.0 SetPanel.qml
+ForensicsPanel 1.0 ForensicsPanel.qml
+LabPanel 1.0 LabPanel.qml

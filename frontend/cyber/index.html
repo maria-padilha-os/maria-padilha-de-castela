@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" data-build-mode="private">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Cyber extensions - private authorized lab</title>
+  <link rel="stylesheet" href="src/theme.css">
+  <link rel="stylesheet" href="src/cyber.css">
+</head>
+<body class="mp-cyber-surface">
+  <!--
+    This page is only a surface. The private build and the runtime feature flag
+    must both be enabled by the host before the manifest is loaded. The normal
+    desktop dashboard is a different surface and is not mounted from here.
+  -->
+  <main id="mp-cyber-root" aria-live="polite"></main>
+
+  <script>
+    window.MARIA_PADILHA_BUILD = "private";
+    window.MARIA_PADILHA_MANIFEST_URL = "manifest.json";
+  </script>
+  <script src="src/registry.js"></script>
+  <script src="src/authorization.js"></script>
+  <script src="src/runner.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>

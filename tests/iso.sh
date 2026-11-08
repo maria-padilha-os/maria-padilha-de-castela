@@ -52,16 +52,24 @@ for file in \
     iso/airootfs/etc/calamares/modules/packagechooser.conf \
     iso/airootfs/etc/calamares/modules/packages.conf \
     iso/airootfs/etc/calamares/branding/maria-padilha/branding.desc \
+    iso/airootfs/usr/share/maria-padilha/cyber/manifest.json \
+    iso/airootfs/usr/share/maria-padilha/cyber/src/registry.js \
+    iso/airootfs/usr/share/maria-padilha/cyber/src/authorization.js \
+    iso/airootfs/usr/share/maria-padilha/cyber/src/runner.js \
+    iso/airootfs/usr/share/maria-padilha/cyber/src/theme.css \
+    iso/airootfs/usr/share/maria-padilha/cyber/qml/CyberShell.qml \
+    iso/airootfs/usr/share/maria-padilha/cyber/qml/ToolPanelFrame.qml \
     docs/policy/security-tool-groups.md \
-    tests/security-groups.sh; do
+    tests/security-groups.sh \
+    tests/cyber-frontend.sh; do
     require_file "$file"
 done
 
-for executable in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh iso/profiledef.sh; do
+for executable in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh; do
     require_exec "$executable"
 done
 
-for script in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh iso/profiledef.sh; do
+for script in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh; do
     if bash -n "$script" 2>/dev/null; then
         ok "$script syntax"
     else
@@ -355,8 +363,10 @@ fi
 # No scanner or capture is wired to start automatically in the live overlay.
 # The installer packagechooser only names optional packages; it must not start
 # them, so it is excluded from this reference check and covered separately by
-# tests/security-groups.sh.
-if grep -RqiE --exclude='packagechooser.conf' --exclude='notes.conf' --exclude='*.service' '(^|[^[:alnum:]_])(nmap|masscan|zmap|nikto|openvas|nessus|tcpdump|tshark|dumpcap)([^[:alnum:]_]|$)' iso/airootfs 2>/dev/null; then
+# tests/security-groups.sh. The private cyber frontend names tools in its tab
+# manifest but has no process spawner; its no-auto-run rule is covered by
+# tests/cyber-frontend.sh.
+if grep -RqiE --exclude='packagechooser.conf' --exclude='notes.conf' --exclude='*.service' --exclude-dir='cyber' '(^|[^[:alnum:]_])(nmap|masscan|zmap|nikto|openvas|nessus|tcpdump|tshark|dumpcap)([^[:alnum:]_]|$)' iso/airootfs 2>/dev/null; then
     bad "scanner or capture reference in airootfs overlay (no default scans)"
 else
     ok "no scanner or capture reference in airootfs overlay"

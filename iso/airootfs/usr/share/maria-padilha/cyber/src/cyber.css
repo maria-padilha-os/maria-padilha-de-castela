@@ -1,0 +1,232 @@
+/*
+ * Layout for the private cyber frontend. All visual values come from the
+ * semantic --cyber-* tokens in theme.css; a component in this file must not
+ * carry a palette literal.
+ */
+
+.mp-cyber-surface {
+    box-sizing: border-box;
+    min-height: 100%;
+    margin: 0;
+    padding: var(--cyber-space-6);
+    background: var(--cyber-color-surface);
+    color: var(--cyber-color-text);
+    font-family: var(--cyber-font-family);
+}
+
+.mp-cyber-surface *,
+.mp-cyber-surface *::before,
+.mp-cyber-surface *::after {
+    box-sizing: inherit;
+}
+
+.mp-cyber-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cyber-space-3);
+    align-items: baseline;
+    justify-content: space-between;
+    margin-block-end: var(--cyber-space-4);
+}
+
+.mp-cyber-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+}
+
+.mp-cyber-namespace {
+    color: var(--cyber-color-text-muted);
+    font-family: var(--cyber-font-mono);
+    font-size: 0.8rem;
+}
+
+.mp-cyber-banner {
+    display: block;
+    margin-block-end: var(--cyber-space-4);
+    padding: var(--cyber-space-3) var(--cyber-space-4);
+    border: var(--cyber-border-width) solid var(--cyber-color-danger);
+    border-inline-start-width: calc(var(--cyber-border-width) * 4);
+    border-radius: var(--cyber-radius);
+    background: var(--cyber-color-surface-raised);
+    color: var(--cyber-color-text);
+    font-weight: 600;
+}
+
+.mp-cyber-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cyber-space-3);
+    align-items: end;
+    margin-block-end: var(--cyber-space-4);
+    padding: var(--cyber-space-3);
+    border: var(--cyber-border-width) solid var(--cyber-color-border);
+    border-radius: var(--cyber-radius);
+    background: var(--cyber-color-surface-raised);
+}
+
+.mp-cyber-field {
+    display: flex;
+    flex: 1 1 18rem;
+    flex-direction: column;
+    gap: var(--cyber-space-1);
+}
+
+.mp-cyber-label {
+    color: var(--cyber-color-text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.mp-cyber-input {
+    min-height: 2rem;
+    padding: var(--cyber-space-1) var(--cyber-space-2);
+    border: var(--cyber-border-width) solid var(--cyber-color-border);
+    border-radius: var(--cyber-radius);
+    background: var(--cyber-color-field);
+    color: var(--cyber-color-field-text);
+    font: inherit;
+}
+
+.mp-cyber-input:focus-visible,
+.mp-cyber-button:focus-visible,
+.mp-cyber-tab:focus-visible {
+    outline: 2px solid var(--cyber-color-focus);
+    outline-offset: 2px;
+}
+
+.mp-cyber-checkbox {
+    display: inline-flex;
+    gap: var(--cyber-space-2);
+    align-items: center;
+}
+
+.mp-cyber-scope {
+    flex: 1 1 100%;
+    padding: var(--cyber-space-2) var(--cyber-space-3);
+    border: var(--cyber-border-width) dashed var(--cyber-color-border);
+    border-radius: var(--cyber-radius);
+    color: var(--cyber-color-text-muted);
+    font-family: var(--cyber-font-mono);
+    font-size: 0.85rem;
+}
+
+.mp-cyber-scope[data-armed="true"] {
+    border-style: solid;
+    border-color: var(--cyber-color-accent);
+    color: var(--cyber-color-text);
+}
+
+.mp-cyber-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cyber-space-2);
+}
+
+.mp-cyber-button {
+    min-height: 2rem;
+    padding: var(--cyber-space-1) var(--cyber-space-3);
+    border: var(--cyber-border-width) solid var(--cyber-color-border);
+    border-radius: var(--cyber-radius);
+    background: var(--cyber-color-surface-raised);
+    color: var(--cyber-color-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.mp-cyber-button:hover:not(:disabled) {
+    border-color: var(--cyber-color-accent);
+}
+
+.mp-cyber-button:disabled {
+    color: var(--cyber-color-text-muted);
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.mp-cyber-button--danger {
+    border-color: var(--cyber-color-danger);
+    background: var(--cyber-color-danger);
+    color: var(--cyber-color-on-danger);
+}
+
+.mp-cyber-button--accent {
+    border-color: var(--cyber-color-accent);
+    background: var(--cyber-color-accent);
+    color: var(--cyber-color-on-accent);
+}
+
+.mp-cyber-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cyber-space-1);
+    margin-block-end: var(--cyber-space-4);
+    border-block-end: var(--cyber-border-width) solid var(--cyber-color-border);
+}
+
+.mp-cyber-tab {
+    padding: var(--cyber-space-2) var(--cyber-space-3);
+    border: var(--cyber-border-width) solid transparent;
+    border-block-end: 0;
+    border-start-start-radius: var(--cyber-radius);
+    border-start-end-radius: var(--cyber-radius);
+    background: transparent;
+    color: var(--cyber-color-text-muted);
+    font: inherit;
+    cursor: pointer;
+}
+
+.mp-cyber-tab[aria-selected="true"] {
+    border-color: var(--cyber-color-border);
+    background: var(--cyber-color-surface-raised);
+    color: var(--cyber-color-text);
+}
+
+.mp-cyber-tab:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.mp-cyber-panel {
+    padding: var(--cyber-space-4);
+    border: var(--cyber-border-width) solid var(--cyber-color-border);
+    border-radius: var(--cyber-radius);
+    background: var(--cyber-color-surface-raised);
+}
+
+.mp-cyber-panel-title {
+    margin-block: 0 var(--cyber-space-2);
+    font-size: 1rem;
+}
+
+.mp-cyber-panel-copy {
+    max-width: 70ch;
+    margin-block: 0 var(--cyber-space-3);
+    color: var(--cyber-color-text-muted);
+}
+
+.mp-cyber-fallback {
+    padding: var(--cyber-space-4);
+    border: var(--cyber-border-width) solid var(--cyber-color-danger);
+    border-radius: var(--cyber-radius);
+    background: var(--cyber-color-surface);
+}
+
+.mp-cyber-fallback-title {
+    margin-block: 0 var(--cyber-space-2);
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+.mp-cyber-status {
+    margin-block-start: var(--cyber-space-3);
+    color: var(--cyber-color-text-muted);
+    font-family: var(--cyber-font-mono);
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+}
+
+.mp-cyber-hidden {
+    display: none;
+}

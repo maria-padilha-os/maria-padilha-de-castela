@@ -1,0 +1,39 @@
+/*
+ * Private cyber surface theme tokens.
+ *
+ * This file contains semantic aliases only. It deliberately has no palette
+ * literals: the desktop shell may supply --mp-* tokens, otherwise the browser's
+ * system colors are used so light/dark/high-contrast modes keep working.
+ * Components must reference --cyber-* variables and never a raw color value.
+ */
+
+:root {
+    color-scheme: light dark;
+
+    --cyber-font-family: var(--mp-font-family, system-ui, sans-serif);
+    --cyber-font-mono: var(--mp-font-mono, ui-monospace, monospace);
+
+    --cyber-space-1: var(--mp-space-1, 0.25rem);
+    --cyber-space-2: var(--mp-space-2, 0.5rem);
+    --cyber-space-3: var(--mp-space-3, 0.75rem);
+    --cyber-space-4: var(--mp-space-4, 1rem);
+    --cyber-space-6: var(--mp-space-6, 1.5rem);
+
+    --cyber-radius: var(--mp-radius, 0.5rem);
+    --cyber-border-width: var(--mp-border-width, 1px);
+
+    --cyber-color-surface: var(--mp-color-surface, Canvas);
+    --cyber-color-surface-raised: var(--mp-color-surface-raised, ButtonFace);
+    --cyber-color-text: var(--mp-color-text, CanvasText);
+    --cyber-color-text-muted: var(--mp-color-text-muted, GrayText);
+    --cyber-color-accent: var(--mp-color-accent, Highlight);
+    --cyber-color-on-accent: var(--mp-color-on-accent, HighlightText);
+    --cyber-color-danger: var(--mp-color-danger, Mark);
+    --cyber-color-on-danger: var(--mp-color-on-danger, MarkText);
+    --cyber-color-border: var(--mp-color-border, ButtonBorder);
+    --cyber-color-focus: var(--mp-color-focus, Highlight);
+    --cyber-color-field: var(--mp-color-field, Field);
+    --cyber-color-field-text: var(--mp-color-field-text, FieldText);
+
+    --cyber-shadow: var(--mp-shadow, none);
+}

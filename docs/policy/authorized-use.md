@@ -89,6 +89,17 @@ queued targets. The scope indicator is a safety control, not a claim that the
 tool is authorized: the operator remains responsible for the written
 authorization.
 
+The private cyber frontend in [`frontend/cyber/`](../../frontend/cyber/README.md)
+implements this boundary. Its dedicated tab registry exposes Nmap, SET,
+Wireshark/forensics, and a lab/VM launcher only when the private build and the
+`MARIA_PADILHA_CYBER_FRONTEND` flag are both enabled. Every offensive panel
+renders the authorization banner, lab-mode state, target-scope indicator, and
+Stop/Clear actions. Lab mode requires an acknowledged written-authorization
+reference, and the runner refuses to start without a bounded scope. A missing
+tool produces a fallback and no command is run. SET remains registered for
+transparency but is policy-blocked and has no launch control. No scanner,
+capture, VM, or service starts automatically.
+
 ### Tool admission
 
 Every package is admitted by a reviewed allowlist. A tool is eligible only if:

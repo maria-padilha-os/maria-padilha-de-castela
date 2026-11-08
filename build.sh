@@ -143,12 +143,30 @@ verify_profile() {
         airootfs/etc/calamares/settings.conf \
         airootfs/etc/calamares/modules/packagechooser.conf \
         airootfs/etc/calamares/modules/packages.conf \
+        airootfs/usr/share/maria-padilha/cyber/manifest.json \
+        airootfs/usr/share/maria-padilha/cyber/src/registry.js \
+        airootfs/usr/share/maria-padilha/cyber/src/authorization.js \
+        airootfs/usr/share/maria-padilha/cyber/src/runner.js \
+        airootfs/usr/share/maria-padilha/cyber/src/theme.css \
+        airootfs/usr/share/maria-padilha/cyber/qml/CyberShell.qml \
+        airootfs/usr/share/maria-padilha/cyber/qml/ToolPanelFrame.qml \
         efiboot/loader/loader.conf \
         efiboot/loader/entries/01-maria-padilha-de-castela-linux.conf \
         syslinux/syslinux.cfg
     do
         [[ -s "$profile_src/$file" ]] || die "profile file missing or empty: iso/$file"
     done
+
+    local cyber_manifest="$profile_src/airootfs/usr/share/maria-padilha/cyber/manifest.json"
+    grep -qF -- '"privateBuild": true' "$cyber_manifest" ||
+        die "cyber frontend manifest is not private-build only"
+    grep -qF -- 'MARIA_PADILHA_CYBER_FRONTEND' "$cyber_manifest" ||
+        die "cyber frontend manifest is missing the feature flag"
+    grep -qF -- '"autoRun": false' "$cyber_manifest" ||
+        die "cyber frontend manifest declares no autoRun: false tabs"
+    if grep -qF -- '"autoRun": true' "$cyber_manifest"; then
+        die "cyber frontend manifest contains an auto-run tab"
+    fi
 
     if ! grep -qE '^[[:space:]]*SigLevel[[:space:]]*=[[:space:]]*Required' "$profile_src/pacman.conf"; then
         die "iso/pacman.conf does not require repository signatures"

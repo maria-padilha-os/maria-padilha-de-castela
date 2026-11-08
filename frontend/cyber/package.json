@@ -1,0 +1,21 @@
+{
+  "name": "@maria-padilha/cyber-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private authorized-lab cyber extension surface with a dedicated tab registry and explicit safety controls.",
+  "license": "GPL-3.0-only",
+  "type": "commonjs",
+  "main": "src/registry.js",
+  "files": [
+    "manifest.json",
+    "src",
+    "qml",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

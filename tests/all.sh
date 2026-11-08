@@ -40,7 +40,14 @@ for f in \
   build/archiso/profile/airootfs/etc/calamares/modules/packagechooser.conf \
   build/archiso/profile/airootfs/etc/calamares/modules/packages.conf \
   docs/policy/security-tool-groups.md \
-  tests/security-groups.sh
+  tests/security-groups.sh \
+  tests/cyber-frontend.sh \
+  frontend/cyber/manifest.json \
+  frontend/cyber/src/registry.js \
+  frontend/cyber/src/authorization.js \
+  frontend/cyber/src/runner.js \
+  frontend/cyber/qml/CyberShell.qml \
+  frontend/cyber/qml/ToolPanelFrame.qml
 do
   require_file "$f"
 done
@@ -209,6 +216,12 @@ else
   echo "ok no obvious tracked secret"
 fi
 rm -f /tmp/secret-scan.$$
+if bash tests/cyber-frontend.sh; then
+  echo "ok tests/cyber-frontend.sh"
+else
+  echo "FAIL tests/cyber-frontend.sh"
+  fail=1
+fi
 if bash tests/security-groups.sh; then
   echo "ok tests/security-groups.sh"
 else

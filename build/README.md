@@ -175,8 +175,10 @@ release, no signing key.
 - The Calamares module configuration is supplied by the desktop overlay; the
   sequence in this repository is not a substitute for an install test.
 - The package list is x86_64-only and has no multilib repository.
-- The reference build does not yet provide the security panel, target-scope
-  indicator, or stop/clear UI described in the project README. Those controls
-  must exist before SET or any comparable dual-use tool is reconsidered.
+- The active `iso/` profile includes the private cyber frontend at
+  `airootfs/usr/share/maria-padilha/cyber/` (source:
+  [`frontend/cyber/`](../frontend/cyber/README.md)). This older reference-build
+  subtree does not duplicate the frontend. SET remains excluded by policy; its
+  tab is policy-blocked and renders no launch control.
 - Rolling repositories mean a later rebuild is not bit-identical without the
   package cache and recorded build environment.

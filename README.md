@@ -10,14 +10,16 @@ not a general-purpose distribution.
 
 ## Status
 
-**Base decision accepted; archiso scaffold and installer group selection in
-place.** [ADR 0001](docs/adr/0001-cybersecurity-os-base.md) chooses **Archiso +
-Calamares** with a curated package set from BlackArch as a package source, not
-as the base image. The first buildable profile is in [`iso/`](iso): boot layout,
-pinned Arch/BlackArch sources, keyring policy, a mandatory Hyprland/Quickshell
-desktop, a small reviewed security baseline, and an offline-safe Calamares
-packagechooser for the optional authorized tool groups. The static tests run
-anywhere; the ISO is built only inside an Arch container, and
+**Base decision accepted; archiso scaffold, installer group selection, and the
+private cyber frontend in place.** [ADR 0001](docs/adr/0001-cybersecurity-os-base.md)
+chooses **Archiso + Calamares** with a curated package set from BlackArch as a
+package source, not as the base image. The first buildable profile is in
+[`iso/`](iso): boot layout, pinned Arch/BlackArch sources, keyring policy, a
+mandatory Hyprland/Quickshell desktop, a small reviewed security baseline, and
+an offline-safe Calamares packagechooser for the optional authorized tool groups.
+The exclusive security tabs live in [`frontend/cyber/`](frontend/cyber/README.md)
+and are copied into the image at `/usr/share/maria-padilha/cyber/`. The static
+tests run anywhere; the ISO is built only inside an Arch container, and
 [`build.sh`](build.sh) refuses to run on a host.
 
 Read next:
@@ -47,6 +49,8 @@ installed on the host and the live root does not install packages at boot.
 | `iso/keys/` | keyring pins and public-key policy; no private key material |
 | `iso/denylist.txt` | phishing and credential-theft packages excluded from the image |
 | `iso/airootfs/etc/calamares/` | installer sequence, authorized-use notice, branding, group chooser |
+| `iso/airootfs/usr/share/maria-padilha/cyber/` | private cyber tabs installed in the image |
+| `frontend/cyber/` | source for the exclusive cyber frontend, manifest, and tests |
 | `iso/airootfs/` | authorized-use banner, live user, greetd, enabled units, mkinitcpio |
 | `iso/efiboot/`, `iso/syslinux/` | UEFI and BIOS boot entries |
 | `build.sh` | container-only mkarchiso wrapper |
@@ -73,6 +77,34 @@ and are wired through `settings.conf` to the Calamares `packages` module. Only
 packages that can be redistributed are offered. Proprietary or unclear-license
 tools are not shipped and are documented as user-installed in
 [`docs/policy/security-tool-groups.md`](docs/policy/security-tool-groups.md).
+
+## Exclusive cyber frontend
+
+The security extensions are a separate, private surface, not the normal desktop
+dashboard. They are exposed only when the build is private **and** the
+`MARIA_PADILHA_CYBER_FRONTEND` flag is on. The dedicated namespace is
+`maria-padilha.cyber` with panels under `maria-padilha.cyber.panels`; the normal
+dashboard is not mounted from this surface.
+
+The manifest registers Nmap, SET, Wireshark/forensics, and the lab/VM launcher.
+Every tab has `"autoRun": false`. SET is registered for transparency but is
+policy-blocked and is not shipped; the tab never renders a launch control. A
+missing tool produces a structured fallback instead of failing the surface, and
+no command is run. Every offensive panel renders the shared authorization
+banner, lab-mode switch, target-scope indicator, and Stop/Clear actions from one
+frame, so the controls cannot be omitted.
+
+Authorization is fail-closed: written authorization must be acknowledged, lab
+mode cannot be enabled before that, and a bounded target scope is required
+before the runner will start anything. Stop cancels the current operation; Clear
+removes the scope and queued targets. The host supplies the availability probe
+and executor; this repository ships no privileged process spawner. Theme values
+are semantic tokens only, so there are no hardcoded palette values.
+
+See [`frontend/cyber/README.md`](frontend/cyber/README.md) for the manifest,
+feature-flag, QML/browser integration, and tests. `tests/cyber-frontend.sh`
+checks the manifest, tab enable/disable, missing-tool fallback, authorization
+state, image mirror, no-auto-run rule, and the no-palette rule.
 
 ## Build
 

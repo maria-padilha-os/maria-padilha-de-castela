@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "namespace": "maria-padilha.cyber",
+  "panelNamespace": "maria-padilha.cyber.panels",
+  "featureFlag": "MARIA_PADILHA_CYBER_FRONTEND",
+  "privateBuild": true,
+  "title": "Cyber extensions",
+  "description": "Private authorized-lab security extension surface. It is separate from the normal desktop dashboard and is exposed only in a private build with the feature flag on.",
+  "sharedControls": [
+    "authorization-banner",
+    "lab-mode",
+    "target-scope",
+    "stop",
+    "clear"
+  ],
+  "authorization": {
+    "banner": "AUTHORIZED USE ONLY. Use this surface only on systems you own or for which you hold explicit, written permission. Define an explicit target scope before running any tool, and stop and clear the scope when finished.",
+    "acknowledgement": "I have explicit written authorization that names the in-scope systems and time window.",
+    "labModeLabel": "Authorized lab mode",
+    "targetScopeLabel": "Target scope (owned or explicitly authorized only)",
+    "targetScopePlaceholder": "e.g. 192.0.2.0/24 or lab-vm.example",
+    "stopLabel": "Stop",
+    "clearLabel": "Clear",
+    "unboundedScopes": [
+      "^0\\.0\\.0\\.0/0$",
+      "^::/0$",
+      "^\\*$",
+      "^any$",
+      "^all$",
+      "^internet$",
+      "^public$"
+    ]
+  },
+  "theme": {
+    "tokens": [
+      "surface",
+      "surfaceRaised",
+      "text",
+      "textMuted",
+      "accent",
+      "onAccent",
+      "danger",
+      "border",
+      "focus"
+    ]
+  },
+  "tabs": [
+    {
+      "id": "nmap",
+      "title": "Nmap",
+      "description": "Explicit, operator-started network mapping for an authorized target scope.",
+      "panel": "maria-padilha.cyber.panels.nmap",
+      "component": "NmapPanel",
+      "offensive": true,
+      "enabled": true,
+      "autoRun": false,
+      "controls": [
+        "authorization-banner",
+        "lab-mode",
+        "target-scope",
+        "stop",
+        "clear"
+      ],
+      "tool": {
+        "commands": [
+          "nmap"
+        ],
+        "required": true,
+        "installHint": "Nmap is part of the reviewed core image. If it is missing, install it from the reviewed package source or work without this tab."
+      }
+    },
+    {
+      "id": "set",
+      "title": "SET",
+      "description": "Social-Engineer Toolkit tab. SET is registered so the missing-tool path is visible, but it is not shipped and no launch control is rendered.",
+      "panel": "maria-padilha.cyber.panels.set",
+      "component": "SetPanel",
+      "offensive": true,
+      "enabled": true,
+      "autoRun": false,
+      "controls": [
+        "authorization-banner",
+        "lab-mode",
+        "target-scope",
+        "stop",
+        "clear"
+      ],
+      "policy": {
+        "admitted": false,
+        "reason": "SET and bundled phishing or credential-capture templates are excluded by the authorized-use policy. The tab never offers a launch control."
+      },
+      "tool": {
+        "commands": [
+          "setoolkit"
+        ],
+        "required": true,
+        "installHint": "SET is deliberately not shipped. Adding it requires a new policy review, template removal, and tests proving the phishing assets are absent."
+      }
+    },
+    {
+      "id": "forensics",
+      "title": "Wireshark / Forensics",
+      "description": "Capture-file inspection and forensic review. No capture starts automatically.",
+      "panel": "maria-padilha.cyber.panels.forensics",
+      "component": "ForensicsPanel",
+      "offensive": true,
+      "enabled": true,
+      "autoRun": false,
+      "controls": [
+        "authorization-banner",
+        "lab-mode",
+        "target-scope",
+        "stop",
+        "clear"
+      ],
+      "tool": {
+        "commands": [
+          "wireshark",
+          "tshark"
+        ],
+        "required": true,
+        "installHint": "Wireshark and the forensic baseline are part of the reviewed core image. Open only captures you own or are authorized to examine."
+      }
+    },
+    {
+      "id": "lab-vm",
+      "title": "Lab / VM",
+      "description": "Isolated VM launcher for authorized lab work. No VM, bridge, or service starts by itself.",
+      "panel": "maria-padilha.cyber.panels.lab-vm",
+      "component": "LabPanel",
+      "offensive": true,
+      "enabled": true,
+      "autoRun": false,
+      "controls": [
+        "authorization-banner",
+        "lab-mode",
+        "target-scope",
+        "stop",
+        "clear"
+      ],
+      "tool": {
+        "commands": [
+          "qemu-system-x86_64",
+          "virsh"
+        ],
+        "required": true,
+        "installHint": "The isolated QEMU/libvirt lab baseline is part of the reviewed core image. Keep lab traffic inside a network you own and control."
+      }
+    }
+  ]
+}

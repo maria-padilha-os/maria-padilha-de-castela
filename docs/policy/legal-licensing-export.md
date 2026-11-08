@@ -79,6 +79,16 @@ These are prompts for review, not final conclusions:
   copyleft, and some may carry non-commercial, attribution, or restricted-use
   terms. A package being in BlackArch is not a license review.
 
+### Security tool group inventory
+
+The installer group definitions are listed, with package names and license
+families, in [`security-tool-groups.md`](security-tool-groups.md). That document
+also records the tools that are **not** redistributed because they are
+proprietary or have unclear terms; users must install those themselves under the
+vendor's license. Before a private release, regenerate the license inventory
+from the built image for every group a recipient selected, not only for the
+default core.
+
 ### Trademarks and branding
 
 Do not imply that BlackArch, Arch Linux, Calamares, or any upstream project

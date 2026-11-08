@@ -26,6 +26,23 @@ The reference build is deliberately console-capable and incomplete as a
 consumer desktop. That is the point: it proves the base, package provenance,
 signing boundary, and policy controls before more tools are added.
 
+## Installer security tool groups
+
+The Calamares overlay offers a mandatory core plus optional Recon, Web,
+Wireless, Forensics, Reversing, Password Auditing, and Lab/VM tool groups. The
+group definitions are in
+`archiso/profile/airootfs/etc/calamares/modules/packagechooser.conf` and are
+consumed by the Calamares `packages` module after `unpackfs`. No group is
+selected by default; selection only installs packages and starts no service,
+scanner, or capture. Optional groups need network access or a local package
+cache, while the core installs offline.
+
+Only redistributable packages are offered. Proprietary or unclear-license tools
+are documented as user-installed in
+[`docs/policy/security-tool-groups.md`](../docs/policy/security-tool-groups.md).
+The shared group definition is mirrored in the active `iso/` profile and checked
+for drift by `tests/security-groups.sh`.
+
 ## Layout
 
 ```text
@@ -40,7 +57,8 @@ build/
         └── airootfs/
             ├── etc/issue
             ├── etc/motd
-            └── etc/calamares/     # sequence, branding, authorized-use notice
+            └── etc/calamares/     # sequence, branding, authorized-use notice,
+                                   # packagechooser groups, package install
 ```
 
 ## Build-host prerequisites (not executed here)
@@ -99,7 +117,9 @@ Run these on the built image or in a live VM. Do not sign until they pass.
    - `/etc/issue` and `/etc/motd` show the banner.
    - Calamares shows the authorized-use product name and no installation path
      silently enables a scanner.
-   - `tests/all.sh` passes.
+   - The group chooser has no preselected optional group; selecting a group only
+     installs packages and starts no service, scanner, or capture.
+   - `tests/all.sh` passes, including `tests/security-groups.sh`.
 4. **No default scans or capture**
    - No systemd service, timer, cron job, shell profile, autostart entry, or
      Calamares hook starts `nmap`, `masscan`, `zmap`, or an equivalent scanner.
@@ -112,7 +132,8 @@ Run these on the built image or in a live VM. Do not sign until they pass.
      present.
    - SET and the other denylisted packages are absent.
 6. **Installer and first boot**
-   - Offline install in a VM succeeds with Calamares.
+   - Offline install in a VM succeeds with Calamares and no optional group
+     selected; selected groups install only with network access or a local cache.
    - First boot shows the banner.
    - SSH server is not enabled by default.
    - No unexpected outbound connection is made by the live session.

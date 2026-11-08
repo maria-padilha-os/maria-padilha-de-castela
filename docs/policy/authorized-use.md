@@ -49,6 +49,11 @@ boundary. The banner must not be dismissible as a one-time click-through that
 silently enables scanning. It is a visible reminder of the boundary, not a
 substitute for authorization.
 
+The installer's optional security tool groups are not selected by default. They
+only install packages; they do not start a scanner, capture, service, or target
+discovery. See [`security-tool-groups.md`](security-tool-groups.md) for the
+group definitions, the mandatory core, and the redistribution review.
+
 ## 3. Defaults
 
 The following are prohibited in the image and in any future panel:

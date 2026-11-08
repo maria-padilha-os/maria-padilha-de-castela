@@ -36,7 +36,11 @@ for f in \
   build/archiso/profile/airootfs/etc/issue \
   build/archiso/profile/airootfs/etc/motd \
   build/archiso/profile/airootfs/etc/calamares/settings.conf \
-  build/archiso/profile/airootfs/etc/calamares/modules/notes.conf
+  build/archiso/profile/airootfs/etc/calamares/modules/notes.conf \
+  build/archiso/profile/airootfs/etc/calamares/modules/packagechooser.conf \
+  build/archiso/profile/airootfs/etc/calamares/modules/packages.conf \
+  docs/policy/security-tool-groups.md \
+  tests/security-groups.sh
 do
   require_file "$f"
 done
@@ -150,7 +154,8 @@ for pkg in set gophish evilginx mimikatz lazagne responder; do
 done
 
 # No default scanner or capture configuration in the live/installer overlay.
-if grep -RqiE '(nmap|masscan|zmap|nikto|openvas|nessus)' build/archiso/profile/airootfs; then
+# The packagechooser only names optional packages; it must not start them.
+if grep -RqiE --exclude='packagechooser.conf' --exclude='notes.conf' '(nmap|masscan|zmap|nikto|openvas|nessus)' build/archiso/profile/airootfs; then
   bad 'scanner reference in airootfs overlay (no default scans)'
 else
   ok 'no scanner reference in airootfs overlay'
@@ -204,6 +209,12 @@ else
   echo "ok no obvious tracked secret"
 fi
 rm -f /tmp/secret-scan.$$
+if bash tests/security-groups.sh; then
+  echo "ok tests/security-groups.sh"
+else
+  echo "FAIL tests/security-groups.sh"
+  fail=1
+fi
 if bash tests/iso.sh; then
   echo "ok tests/iso.sh"
 else

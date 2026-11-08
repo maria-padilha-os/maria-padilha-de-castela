@@ -1,0 +1,19 @@
+# Text-only branding for the private Maria Padilha de Castela build.
+# The desktop repository supplies logo/image assets for the final image.
+
+---
+componentName: maria-padilha-de-castela
+
+welcomeStyleCalamares: true
+
+strings:
+    productName: "Maria Padilha de Castela - Authorized Lab Use Only"
+    shortProductName: "Maria Padilha"
+    version: "0.1.0"
+    shortVersion: "0.1.0"
+    versionedName: "Maria Padilha de Castela (private authorized-lab image)"
+    shortVersionedName: "Maria Padilha"
+    bootloaderEntryName: "Maria Padilha"
+    productUrl: "https://github.com/maria-padilha-os/maria-padilha-de-castela"
+    supportUrl: "https://github.com/maria-padilha-os/maria-padilha-de-castela/issues"
+    releaseNotesUrl: "https://github.com/maria-padilha-os/maria-padilha-de-castela"

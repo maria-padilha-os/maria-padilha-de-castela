@@ -45,15 +45,23 @@ for file in \
     iso/efiboot/loader/entries/01-maria-padilha-de-castela-linux.conf \
     iso/syslinux/syslinux.cfg \
     iso/syslinux/archiso_sys.cfg \
-    iso/syslinux/archiso_sys-linux.cfg; do
+    iso/syslinux/archiso_sys-linux.cfg \
+    iso/airootfs/etc/calamares/settings.conf \
+    iso/airootfs/etc/calamares/modules/welcome.conf \
+    iso/airootfs/etc/calamares/modules/notes.conf \
+    iso/airootfs/etc/calamares/modules/packagechooser.conf \
+    iso/airootfs/etc/calamares/modules/packages.conf \
+    iso/airootfs/etc/calamares/branding/maria-padilha/branding.desc \
+    docs/policy/security-tool-groups.md \
+    tests/security-groups.sh; do
     require_file "$file"
 done
 
-for executable in build.sh tests/all.sh tests/iso.sh iso/profiledef.sh; do
+for executable in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh iso/profiledef.sh; do
     require_exec "$executable"
 done
 
-for script in build.sh tests/all.sh tests/iso.sh iso/profiledef.sh; do
+for script in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh iso/profiledef.sh; do
     if bash -n "$script" 2>/dev/null; then
         ok "$script syntax"
     else
@@ -157,6 +165,7 @@ required_packages=(
     virt-manager
     edk2-ovmf
     firejail
+    calamares
     archlinux-keyring
     blackarch-keyring
     blackarch-mirrorlist
@@ -344,7 +353,10 @@ else
 fi
 
 # No scanner or capture is wired to start automatically in the live overlay.
-if grep -RqiE --exclude='*.service' '(^|[^[:alnum:]_])(nmap|masscan|zmap|nikto|openvas|nessus|tcpdump|tshark|dumpcap)([^[:alnum:]_]|$)' iso/airootfs 2>/dev/null; then
+# The installer packagechooser only names optional packages; it must not start
+# them, so it is excluded from this reference check and covered separately by
+# tests/security-groups.sh.
+if grep -RqiE --exclude='packagechooser.conf' --exclude='notes.conf' --exclude='*.service' '(^|[^[:alnum:]_])(nmap|masscan|zmap|nikto|openvas|nessus|tcpdump|tshark|dumpcap)([^[:alnum:]_]|$)' iso/airootfs 2>/dev/null; then
     bad "scanner or capture reference in airootfs overlay (no default scans)"
 else
     ok "no scanner or capture reference in airootfs overlay"

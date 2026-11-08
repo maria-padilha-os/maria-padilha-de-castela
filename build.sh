@@ -140,6 +140,9 @@ verify_profile() {
         airootfs/etc/issue \
         airootfs/etc/motd \
         airootfs/etc/mkinitcpio.conf.d/archiso.conf \
+        airootfs/etc/calamares/settings.conf \
+        airootfs/etc/calamares/modules/packagechooser.conf \
+        airootfs/etc/calamares/modules/packages.conf \
         efiboot/loader/loader.conf \
         efiboot/loader/entries/01-maria-padilha-de-castela-linux.conf \
         syslinux/syslinux.cfg

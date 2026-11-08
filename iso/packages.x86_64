@@ -89,6 +89,11 @@ ttf-dejavu
 greetd
 greetd-tuigreet
 
+# Installer: Calamares, with the authorized security tool group chooser.
+# Optional group packages are installed from the reviewed repositories through
+# the packagechooser/packages modules; they are not all baked into the live root.
+calamares
+
 # Minimal reviewed security baseline: network analysis, forensics, isolated lab.
 # These tools are installed for explicit, user-initiated lab work. Nothing is
 # configured to scan, capture, or touch a target automatically.

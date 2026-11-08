@@ -10,17 +10,20 @@ not a general-purpose distribution.
 
 ## Status
 
-**Base decision accepted; archiso scaffold in place.** [ADR 0001](docs/adr/0001-cybersecurity-os-base.md)
-chooses **Archiso + Calamares** with a curated package set from BlackArch as a
-package source, not as the base image. The first buildable profile is in
-[`iso/`](iso): boot layout, pinned Arch/BlackArch sources, keyring policy, a
-mandatory Hyprland/Quickshell desktop, and a small reviewed security baseline.
-The static tests run anywhere; the ISO is built only inside an Arch container,
-and [`build.sh`](build.sh) refuses to run on a host.
+**Base decision accepted; archiso scaffold and installer group selection in
+place.** [ADR 0001](docs/adr/0001-cybersecurity-os-base.md) chooses **Archiso +
+Calamares** with a curated package set from BlackArch as a package source, not
+as the base image. The first buildable profile is in [`iso/`](iso): boot layout,
+pinned Arch/BlackArch sources, keyring policy, a mandatory Hyprland/Quickshell
+desktop, a small reviewed security baseline, and an offline-safe Calamares
+packagechooser for the optional authorized tool groups. The static tests run
+anywhere; the ISO is built only inside an Arch container, and
+[`build.sh`](build.sh) refuses to run on a host.
 
 Read next:
 
 - [Authorized-use boundary](docs/policy/authorized-use.md)
+- [Authorized security tool groups](docs/policy/security-tool-groups.md)
 - [Legal, licensing, and export considerations](docs/policy/legal-licensing-export.md)
 - [Reference build](build/README.md)
 
@@ -43,6 +46,7 @@ installed on the host and the live root does not install packages at boot.
 | `iso/pacman.conf` | pinned Arch archive and BlackArch sources, strict signatures |
 | `iso/keys/` | keyring pins and public-key policy; no private key material |
 | `iso/denylist.txt` | phishing and credential-theft packages excluded from the image |
+| `iso/airootfs/etc/calamares/` | installer sequence, authorized-use notice, branding, group chooser |
 | `iso/airootfs/` | authorized-use banner, live user, greetd, enabled units, mkinitcpio |
 | `iso/efiboot/`, `iso/syslinux/` | UEFI and BIOS boot entries |
 | `build.sh` | container-only mkarchiso wrapper |
@@ -53,6 +57,22 @@ daemons, greetd/tuigreet, and the `maria-padilha` session package are in the
 allowlist. The security baseline is deliberately small: Nmap, Wireshark,
 packet/forensic inspection, and an isolated QEMU/libvirt lab. No scanner or
 capture tool is started automatically.
+
+## Installer security tool groups
+
+Calamares offers a **mandatory core** and seven optional, user-selected groups:
+Recon, Web, Wireless, Forensics, Reversing, Password Auditing, and Lab/VM tools.
+The core is always installed from the image. Optional groups only add package
+lists; **no group is selected by default**, and selecting one does not start a
+service, scanner, capture, or target discovery. Optional groups need network
+access or a local package cache; an offline install receives the core image.
+
+The group definitions live in
+[`iso/airootfs/etc/calamares/modules/packagechooser.conf`](iso/airootfs/etc/calamares/modules/packagechooser.conf)
+and are wired through `settings.conf` to the Calamares `packages` module. Only
+packages that can be redistributed are offered. Proprietary or unclear-license
+tools are not shipped and are documented as user-installed in
+[`docs/policy/security-tool-groups.md`](docs/policy/security-tool-groups.md).
 
 ## Build
 

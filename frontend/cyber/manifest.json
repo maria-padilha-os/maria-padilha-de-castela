@@ -17,6 +17,7 @@
     "banner": "AUTHORIZED USE ONLY. Use this surface only on systems you own or for which you hold explicit, written permission. Define an explicit target scope before running any tool, and stop and clear the scope when finished.",
     "acknowledgement": "I have explicit written authorization that names the in-scope systems and time window.",
     "labModeLabel": "Authorized lab mode",
+    "labConfirmationLabel": "I confirm this Nmap scan targets an authorized lab or private network.",
     "targetScopeLabel": "Target scope (owned or explicitly authorized only)",
     "targetScopePlaceholder": "e.g. 192.0.2.0/24 or lab-vm.example",
     "stopLabel": "Stop",

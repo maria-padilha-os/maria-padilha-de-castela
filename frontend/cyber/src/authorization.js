@@ -48,6 +48,9 @@ function AuthorizationState(config) {
     this.labModeLabel = nonEmpty(config.labModeLabel)
         ? config.labModeLabel
         : "Authorized lab mode";
+    this.labConfirmationLabel = nonEmpty(config.labConfirmationLabel)
+        ? config.labConfirmationLabel
+        : "I confirm this scan targets an authorized lab or private network.";
     this.targetScopeLabel = nonEmpty(config.targetScopeLabel)
         ? config.targetScopeLabel
         : "Target scope";
@@ -80,6 +83,7 @@ AuthorizationState.prototype._snapshot = function () {
         banner: this.banner,
         acknowledgement: this.acknowledgement,
         labModeLabel: this.labModeLabel,
+        labConfirmationLabel: this.labConfirmationLabel,
         targetScopeLabel: this.targetScopeLabel,
         stopLabel: this.stopLabel,
         clearLabel: this.clearLabel,

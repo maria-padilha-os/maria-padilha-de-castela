@@ -13,7 +13,14 @@
     var state = {
         surface: null,
         activeTabId: "",
-        lastStatus: ""
+        lastStatus: "",
+        nmap: {
+            target: "",
+            profile: "tcp-connect",
+            options: {},
+            authorizedLab: false,
+            resultText: ""
+        }
     };
 
     function el(tag, className, textValue) {
@@ -166,6 +173,206 @@
         return box;
     }
 
+    function nmapModule() {
+        return window.CyberNmap || null;
+    }
+
+    function nmapRequest() {
+        var Nmap = nmapModule();
+        if (!Nmap) {
+            return {ok: false, reason: "the Nmap helper module is not loaded"};
+        }
+        var snapshot = state.surface.authorization.snapshot();
+        return Nmap.prepareScan({
+            target: state.nmap.target,
+            profile: state.nmap.profile,
+            options: state.nmap.options,
+            scope: snapshot.scope,
+            authorizedLab: state.nmap.authorizedLab
+        });
+    }
+
+    function fieldBox(labelText, control) {
+        var box = el("div", "mp-cyber-field");
+        box.appendChild(el("label", "mp-cyber-label", labelText));
+        box.appendChild(control);
+        return box;
+    }
+
+    function renderNmapPanel(panel, tab, prepared) {
+        var Nmap = nmapModule();
+        if (!Nmap) {
+            panel.appendChild(fallbackBox({
+                title: "Nmap helper unavailable",
+                message: "The Nmap validator/parser module was not loaded, so no launch control is offered.",
+                reason: "src/nmap.js is missing",
+                installHint: "Restore the reviewed frontend file and reload the surface."
+            }));
+            return;
+        }
+
+        var nmap = state.nmap;
+        var authSnapshot = state.surface.authorization.snapshot();
+        var validation = el("p", "mp-cyber-error", "");
+        var targetLine = el("div", "mp-cyber-scope", "");
+        var run = el("button", "mp-cyber-button mp-cyber-button--accent", "Start Nmap (explicit)");
+        run.type = "button";
+
+        panel.appendChild(el("p", "mp-cyber-panel-copy",
+            "Targets must be private, loopback, documentation/lab addresses, or names under an approved lab suffix. Public ranges are refused."));
+
+        var targetInput = el("input", "mp-cyber-input");
+        targetInput.type = "text";
+        targetInput.value = nmap.target;
+        targetInput.placeholder = "e.g. 192.168.1.10 or lab-vm.example";
+        targetInput.addEventListener("input", function () {
+            nmap.target = targetInput.value;
+            refreshNmapState();
+        });
+        panel.appendChild(fieldBox("Target (private/authorized lab only)", targetInput));
+
+        var profileSelect = el("select", "mp-cyber-input");
+        Nmap.listProfiles().forEach(function (profile) {
+            var option = el("option", "", profile.label);
+            option.value = profile.id;
+            option.selected = profile.id === nmap.profile;
+            profileSelect.appendChild(option);
+        });
+        profileSelect.addEventListener("change", function () {
+            nmap.profile = profileSelect.value;
+            var available = Nmap.listOptions(nmap.profile).map(function (option) {
+                return option.id;
+            });
+            Object.keys(nmap.options).forEach(function (id) {
+                if (available.indexOf(id) === -1) {
+                    delete nmap.options[id];
+                }
+            });
+            render();
+        });
+        panel.appendChild(fieldBox("Profile", profileSelect));
+
+        var currentProfile = Nmap.getProfile(nmap.profile);
+        panel.appendChild(el("p", "mp-cyber-panel-copy",
+            currentProfile ? currentProfile.description : ""));
+
+        var optionBox = el("div", "mp-cyber-controls");
+        Nmap.listOptions(nmap.profile).forEach(function (option) {
+            var label = el("label", "mp-cyber-checkbox");
+            var checkbox = el("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = nmap.options[option.id] === true;
+            checkbox.addEventListener("change", function () {
+                if (checkbox.checked) {
+                    nmap.options[option.id] = true;
+                } else {
+                    delete nmap.options[option.id];
+                }
+                refreshNmapState();
+            });
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(option.label));
+            label.title = option.description;
+            optionBox.appendChild(label);
+        });
+        if (optionBox.childNodes.length > 0) {
+            panel.appendChild(fieldBox("Options", optionBox));
+        }
+
+        var confirmLabel = el("label", "mp-cyber-checkbox");
+        var confirm = el("input");
+        confirm.type = "checkbox";
+        confirm.id = "mp-nmap-authorized-lab";
+        confirm.checked = nmap.authorizedLab;
+        confirm.addEventListener("change", function () {
+            nmap.authorizedLab = confirm.checked;
+            refreshNmapState();
+        });
+        confirmLabel.appendChild(confirm);
+        confirmLabel.appendChild(document.createTextNode(
+            authSnapshot.labConfirmationLabel ||
+                "I confirm this Nmap scan targets an authorized lab or private network."));
+        panel.appendChild(confirmLabel);
+
+        panel.appendChild(validation);
+        panel.appendChild(targetLine);
+
+        run.addEventListener("click", function () {
+            var request = nmapRequest();
+            if (!request.ok) {
+                refreshNmapState();
+                return;
+            }
+            var result = state.surface.runner.start("nmap", {
+                confirmed: true,
+                args: request.args,
+                target: request.target,
+                targets: request.targets,
+                profile: request.profile,
+                timeoutMs: request.timeoutMs,
+                metadata: {xml: true, authorizedLab: true}
+            });
+            if (result.status !== "started") {
+                state.lastStatus = result.status + (result.reason ? ": " + result.reason : "");
+                render();
+                return;
+            }
+            state.lastStatus = "Nmap scan started by explicit operator action.";
+            finishNmap(result.result, request.timeoutMs);
+        });
+        panel.appendChild(run);
+
+        var resultBox = el("pre", "mp-cyber-status", nmap.resultText);
+        resultBox.id = "mp-nmap-result";
+        panel.appendChild(resultBox);
+
+        var status = el("pre", "mp-cyber-status", state.lastStatus ||
+            (prepared.status === "ready"
+                ? "Ready. Review the target and scope, check the authorized-lab confirmation, then click Start."
+                : prepared.reason));
+        status.id = "mp-cyber-status";
+        panel.appendChild(status);
+
+        function finishNmap(execution, timeoutMs) {
+            var parsed;
+            if (execution && typeof execution.then === "function") {
+                execution.then(function (value) {
+                    finishNmap(value, timeoutMs);
+                }, function (error) {
+                    var failed = Nmap.interpretScanResult({
+                        status: "failed",
+                        message: error && error.message ? error.message : String(error)
+                    }, {timeoutMs: timeoutMs});
+                    state.nmap.resultText = Nmap.formatScanResult(failed);
+                    state.lastStatus = failed.timedOut
+                        ? "Nmap scan timed out."
+                        : "Nmap scan failed.";
+                    render();
+                });
+                return;
+            }
+            parsed = Nmap.interpretScanResult(execution, {timeoutMs: timeoutMs});
+            state.nmap.resultText = Nmap.formatScanResult(parsed);
+            state.lastStatus = parsed.timedOut
+                ? "Nmap scan timed out."
+                : (parsed.ok ? "Nmap scan complete." : "Nmap scan failed.");
+            render();
+        }
+
+        function refreshNmapState() {
+            var request = nmapRequest();
+            validation.textContent = request.ok ? "" : request.reason;
+            validation.hidden = request.ok;
+            targetLine.textContent = nmap.target.length > 0
+                ? "TARGET: " + nmap.target
+                : "NO TARGET - Nmap cannot start";
+            targetLine.setAttribute("data-armed", request.ok ? "true" : "false");
+            run.disabled = prepared.status !== "ready" || !request.ok;
+        }
+
+        refreshNmapState();
+    }
+
     function renderPanel(container, tab) {
         var panel = el("section", "mp-cyber-panel");
         panel.id = "mp-cyber-panel";
@@ -189,6 +396,12 @@
         var prepared = state.surface.runner.prepare(tab.id);
         if (prepared.status === "missing-tool") {
             panel.appendChild(fallbackBox(prepared.fallback));
+            container.appendChild(panel);
+            return;
+        }
+
+        if (tab.id === "nmap") {
+            renderNmapPanel(panel, tab, prepared);
             container.appendChild(panel);
             return;
         }

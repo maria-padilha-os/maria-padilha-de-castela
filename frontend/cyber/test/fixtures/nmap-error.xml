@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" args="nmap -sT -oX - 192.0.2.10" start="1770000000" startstr="Mon Feb  2 00:00:00 2026" version="7.94" xmloutputversion="1.05">
+<host starttime="1770000001" endtime="1770000001">
+<status state="up" reason="syn-ack"/>
+<address addr="192.0.2.10" addrtype="ipv4"/>
+<ports>
+<port protocol="tcp" portid="22">
+<state state="open" reason="syn-ack"/>
+<service name="ssh" product="OpenSSH" version="9.6"/>
+</port>
+</ports>
+</host>
+<runstats>
+<finished time="1770000002" timestr="Mon Feb  2 00:00:02 2026" elapsed="2.00" summary="Nmap done; incomplete result" exit="error" errormsg="Could not determine target route &amp; stopped"/>
+<hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

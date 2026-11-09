@@ -101,6 +101,17 @@ removes the scope and queued targets. The host supplies the availability probe
 and executor; this repository ships no privileged process spawner. Theme values
 are semantic tokens only, so there are no hardcoded palette values.
 
+The Nmap tab exposes a canonical target, a documented unprivileged profile, and
+a small allowlisted option set instead of free-form arguments. Public targets are
+refused by default, the target must be inside the visible scope, and a separate
+authorized-lab confirmation is required before the explicit Start action. XML
+results are parsed into hosts/ports/services, with malformed output, Nmap errors,
+and timeouts shown as errors. The command is passed to the host as an argv array
+with `shell: false`; there is no auto-scan, scheduled scan, or privilege
+escalation. See [`frontend/cyber/src/nmap.js`](frontend/cyber/src/nmap.js) and
+the fixture-based tests in
+[`frontend/cyber/test/nmap.test.cjs`](frontend/cyber/test/nmap.test.cjs).
+
 See [`frontend/cyber/README.md`](frontend/cyber/README.md) for the manifest,
 feature-flag, QML/browser integration, and tests. `tests/cyber-frontend.sh`
 checks the manifest, tab enable/disable, missing-tool fallback, authorization

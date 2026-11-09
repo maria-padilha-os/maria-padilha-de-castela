@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -sT -sV --open -oX - 192.0.2.10" start="1770000000" startstr="Mon Feb  2 00:00:00 2026" version="7.94" xmloutputversion="1.05">
+<scaninfo type="connect" protocol="tcp" numservices="1000" services="1-1000"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1770000001" endtime="1770000002">
+<status state="up" reason="syn-ack"/>
+<address addr="192.0.2.10" addrtype="ipv4"/>
+<hostnames>
+<hostname name="lab-vm.example" type="user"/>
+</hostnames>
+<ports>
+<extraports state="closed" count="998"/>
+<port protocol="tcp" portid="22">
+<state state="open" reason="syn-ack"/>
+<service name="ssh" product="OpenSSH" version="9.6" extrainfo="Ubuntu Linux" ostype="Linux" method="probed" conf="10"/>
+</port>
+<port protocol="tcp" portid="443">
+<state state="open" reason="syn-ack"/>
+<service name="https" product="nginx &amp; test" version="1.24.0" tunnel="ssl" method="probed" conf="10"/>
+</port>
+</ports>
+<times srtt="1200" rttvar="300" to="100000"/>
+</host>
+<runstats>
+<finished time="1770000003" timestr="Mon Feb  2 00:00:03 2026" elapsed="1.23" summary="Nmap done at Mon Feb  2 00:00:03 2026; 1 IP address (1 host up) scanned in 1.23 seconds" exit="success"/>
+<hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

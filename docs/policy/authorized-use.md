@@ -95,10 +95,13 @@ Wireshark/forensics, and a lab/VM launcher only when the private build and the
 `MARIA_PADILHA_CYBER_FRONTEND` flag are both enabled. Every offensive panel
 renders the authorization banner, lab-mode state, target-scope indicator, and
 Stop/Clear actions. Lab mode requires an acknowledged written-authorization
-reference, and the runner refuses to start without a bounded scope. A missing
-tool produces a fallback and no command is run. SET remains registered for
-transparency but is policy-blocked and has no launch control. No scanner,
-capture, VM, or service starts automatically.
+reference, and the runner refuses to start without a bounded scope. The Nmap tab
+additionally canonicalizes and allowlists its target, refuses public ranges by
+default, exposes only documented unprivileged profiles/options, and requires a
+separate authorized-lab confirmation for each scan. A missing tool produces a
+fallback and no command is run. SET remains registered for transparency but is
+policy-blocked and has no launch control. No scanner, capture, VM, or service
+starts automatically.
 
 ### Tool admission
 

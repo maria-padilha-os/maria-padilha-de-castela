@@ -46,8 +46,14 @@ for f in \
   frontend/cyber/src/registry.js \
   frontend/cyber/src/authorization.js \
   frontend/cyber/src/runner.js \
+  frontend/cyber/src/nmap.js \
   frontend/cyber/qml/CyberShell.qml \
-  frontend/cyber/qml/ToolPanelFrame.qml
+  frontend/cyber/qml/ToolPanelFrame.qml \
+  frontend/cyber/qml/NmapPanel.qml \
+  frontend/cyber/test/nmap.test.cjs \
+  frontend/cyber/test/fixtures/nmap-basic.xml \
+  frontend/cyber/test/fixtures/nmap-error.xml \
+  frontend/cyber/test/fixtures/nmap-timeout.xml
 do
   require_file "$f"
 done

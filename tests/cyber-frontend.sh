@@ -28,6 +28,7 @@ for file in \
     "$src/src/registry.js" \
     "$src/src/authorization.js" \
     "$src/src/runner.js" \
+    "$src/src/nmap.js" \
     "$src/src/theme.css" \
     "$src/src/cyber.css" \
     "$src/src/app.js" \
@@ -50,6 +51,10 @@ for file in \
     "$src/test/registry.test.cjs" \
     "$src/test/authorization.test.cjs" \
     "$src/test/runner.test.cjs" \
+    "$src/test/nmap.test.cjs" \
+    "$src/test/fixtures/nmap-basic.xml" \
+    "$src/test/fixtures/nmap-error.xml" \
+    "$src/test/fixtures/nmap-timeout.xml" \
     "$src/test/theme.test.cjs"
 do
     require_file "$file"
@@ -65,6 +70,7 @@ mirror_files=(
     src/registry.js
     src/authorization.js
     src/runner.js
+    src/nmap.js
     src/theme.css
     src/cyber.css
     src/app.js
@@ -129,6 +135,39 @@ if grep -qF '"autoRun": false' "$src/manifest.json"; then
 else
     bad "manifest does not declare autoRun: false"
 fi
+
+# The Nmap surface must keep its target/profile/option validation and explicit
+# authorized-lab confirmation instead of accepting free-form arguments.
+for term in \
+    'validateTarget' \
+    'buildScanRequest' \
+    'parseNmapXml' \
+    'interpretScanResult' \
+    'authorizedLab' \
+    'authorized lab' \
+    'shell: false' \
+    'public targets are refused'
+do
+    if grep -RqF -- "$term" "$src/src/nmap.js" "$src/qml/NmapPanel.qml" "$src/src/app.js"; then
+        ok "Nmap extension contains $term"
+    else
+        bad "Nmap extension is missing $term"
+    fi
+done
+
+if grep -qF -- "-oX" "$src/src/nmap.js"; then
+    ok "Nmap requests XML output on stdout"
+else
+    bad "Nmap does not request XML output"
+fi
+
+for forbidden in ' -sS' ' -sU' ' -O ' ' -A ' '--script'; do
+    if grep -RqF -- "$forbidden" "$src/src/nmap.js"; then
+        bad "Nmap module contains privileged/aggressive flag: $forbidden"
+    else
+        ok "Nmap module excludes $forbidden"
+    fi
+done
 
 # No palette literal in component CSS or QML. The theme file is allowed only
 # semantic aliases too, so it is included.

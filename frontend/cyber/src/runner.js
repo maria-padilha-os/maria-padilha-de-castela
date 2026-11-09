@@ -160,6 +160,12 @@ ToolRunner.prototype.prepare = function (tabId, options) {
         commands: tab.tool.commands.slice(),
         scope: auth.scope,
         args: Array.isArray(options.args) ? options.args.slice() : [],
+        shell: false,
+        target: nonEmpty(options.target) ? options.target : null,
+        targets: Array.isArray(options.targets) ? options.targets.slice() : null,
+        profile: nonEmpty(options.profile) ? options.profile : null,
+        timeoutMs: typeof options.timeoutMs === "number" ? options.timeoutMs : null,
+        metadata: isObject(options.metadata) ? options.metadata : null,
         authorization: auth
     });
 };
@@ -198,7 +204,14 @@ ToolRunner.prototype.start = function (tabId, options) {
         tabId: tabId,
         command: prepared.command,
         args: prepared.args.slice(),
+        argv: [prepared.command].concat(prepared.args.slice()),
+        shell: false,
         scope: prepared.scope,
+        target: prepared.target,
+        targets: prepared.targets,
+        profile: prepared.profile,
+        timeoutMs: prepared.timeoutMs,
+        metadata: prepared.metadata,
         startedAt: Date.now()
     };
 

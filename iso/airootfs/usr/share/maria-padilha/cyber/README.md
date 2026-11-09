@@ -89,6 +89,72 @@ Authorization is fail-closed:
 4. Stop cancels the current operation and keeps the scope for inspection;
 5. Clear removes the scope and every queued target.
 
+## Nmap extension
+
+The Nmap tab has a target, a documented profile, a small allowlisted option set,
+and a separate per-scan "authorized lab/private network" confirmation. The
+target and profile are validated locally by [`src/nmap.js`](src/nmap.js) before
+the runner is called. There is no free-form argument field and no default scan.
+
+### Targets
+
+`validateTarget()` canonicalizes a target and refuses anything outside the
+following allowlist unless a caller explicitly passes `{ allowPublic: true }`
+(the UI never does):
+
+- IPv4 RFC 1918 ranges, loopback, link-local, shared address space, and the
+  documentation/benchmark ranges used by lab fixtures (`192.0.2.0/24`,
+  `198.51.100.0/24`, `203.0.113.0/24`, `198.18.0.0/15`);
+- IPv6 loopback, unique-local (`fc00::/7`), link-local, and documentation
+  (`2001:db8::/32`);
+- single-label lab names and names under approved suffixes such as `.localhost`,
+  `.local`, `.lan`, `.lab`, `.test`, `.example`, `.invalid`, `.internal`, and
+  `.home.arpa`.
+
+IPv4 CIDRs are canonicalized to their network address. Hostnames are lowercased
+and a trailing dot is removed. Leading-zero IPv4 octets are refused because a
+value such as `010` is ambiguous between decimal and octal. A target containing
+whitespace, shell control characters, a leading dash, or multiple targets in one
+field is refused. When a scope is supplied, the target must be contained in that
+scope.
+
+### Profiles and options
+
+Profiles only use unprivileged Nmap scans. There is no SYN scan, UDP scan, OS
+detection, `-A`, NSE script selection, or privilege escalation.
+
+| profile | flags | options |
+| --- | --- | --- |
+| `discovery` | `-sn` | `reason` |
+| `tcp-connect` | `-sT` | `no-ping`, `open-only`, `reason`, `top-ports-100` |
+| `service` | `-sT -sV` | `no-ping`, `open-only`, `reason`, `version-light`, `top-ports-100` |
+| `top-100` | `-sT --top-ports 100` | `no-ping`, `open-only`, `reason` |
+
+| option | flag |
+| --- | --- |
+| `no-ping` | `-Pn` |
+| `open-only` | `--open` |
+| `reason` | `--reason` |
+| `version-light` | `--version-light` |
+| `top-ports-100` | `--top-ports 100` |
+
+`buildScanRequest()` returns a command and an argv array, always adds `-oX -` so
+XML goes to stdout, and sets `shell: false`. The host executor must pass that
+argv directly to Nmap (for example with an argv-style spawn API); it must never
+join it into a shell command. `prepareScan()` additionally requires
+`authorizedLab: true` and a bounded scope.
+
+### XML results
+
+`parseNmapXml()` reads Nmap's XML into hosts, addresses, hostnames, ports, port
+states, services (name/product/version/extrainfo/tunnel), scripts, and run
+statistics. `interpretScanResult()` also accepts an executor result containing
+`stdout`/`xml`, `stderr`, a non-zero exit code, or a timeout status. Malformed
+XML, DTD entity declarations, unknown entities, Nmap `exit="error"`, and
+`exit="timeout"` fail closed with an `errors` array. `formatScanResult()` turns
+the result into the plain-text host/port/service summary shown by both surfaces.
+Timeouts are reported explicitly and never become an empty "success".
+
 ## Missing tools and no auto-run
 
 The runner probes tool availability through a host-supplied function. A missing
@@ -131,7 +197,10 @@ bash tests/cyber-frontend.sh
 The tests cover manifest loading (including rejected manifests), tab
 enable/disable, missing-tool fallback, the no-auto-run rule, authorization and
 lab-mode state, the browser/QML shared controls, and the no-hardcoded-palette
-rule.
+rule. The Nmap tests add fixture XML for success, error, and timeout results plus
+argument validation, public-target refusal, scope containment, option/profile
+allowlists, and a check that the module ships no process spawner or network
+client. They never run a live scan.
 
 ## Boundary
 

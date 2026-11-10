@@ -79,14 +79,29 @@ test("missing tools fall back without executing anything", () => {
 });
 
 test("a policy-blocked tab never offers a launch path", () => {
-    const { runner, executions } = fixture(() => ({
-        available: true,
-        command: "setoolkit"
-    }));
+    const blockedManifest = JSON.parse(JSON.stringify(manifest));
+    const blockedTab = blockedManifest.tabs.find((tab) => tab.id === "set");
+    blockedTab.policy = {
+        admitted: false,
+        reason: "blocked for the policy test"
+    };
+
+    const registry = new Registry.TabRegistry(blockedManifest);
+    const authorization = new Authorization.AuthorizationState(manifest.authorization);
+    const executions = [];
+    const runner = new Runner.ToolRunner({
+        registry,
+        authorization,
+        probe: () => ({ available: true, command: "setoolkit" }),
+        execute(invocation) {
+            executions.push(invocation);
+        }
+    });
+
     const prepared = runner.prepare("set");
     assert.equal(prepared.status, "policy-blocked");
     assert.equal(prepared.executed, false);
-    assert.match(prepared.reason, /policy|phishing|credential/i);
+    assert.match(prepared.reason, /policy/);
 
     const started = runner.start("set", { confirmed: true });
     assert.equal(started.status, "policy-blocked");

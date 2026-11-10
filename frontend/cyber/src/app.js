@@ -20,6 +20,10 @@
             options: {},
             authorizedLab: false,
             resultText: ""
+        },
+        set: {
+            confirmed: false,
+            resultText: ""
         }
     };
 
@@ -197,6 +201,125 @@
         box.appendChild(el("label", "mp-cyber-label", labelText));
         box.appendChild(control);
         return box;
+    }
+
+    function setModule() {
+        return window.CyberSet || null;
+    }
+
+    function setRequest() {
+        var Set = setModule();
+        if (!Set) {
+            return {ok: false, reason: "the SET helper module is not loaded"};
+        }
+        return Set.prepareLaunch({
+            confirmed: state.set.confirmed,
+            authorization: state.surface.authorization.snapshot()
+        });
+    }
+
+    function renderSetPanel(panel, tab, prepared) {
+        var Set = setModule();
+        if (!Set) {
+            panel.appendChild(fallbackBox({
+                title: "SET helper unavailable",
+                message: "The SET launcher/status module was not loaded, so no launch control is offered.",
+                reason: "src/set.js is missing",
+                installHint: "Restore the reviewed frontend file and reload the surface."
+            }));
+            return;
+        }
+
+        var authSnapshot = state.surface.authorization.snapshot();
+        var available = prepared.status !== "missing-tool" &&
+            state.surface.registry.get("set").toolAvailable === true;
+        var report = Set.statusReport({
+            available: available,
+            command: "setoolkit",
+            reason: prepared.status === "missing-tool"
+                ? (prepared.fallback && prepared.fallback.reason) || prepared.reason
+                : "SET is present"
+        });
+
+        panel.appendChild(el("p", "mp-cyber-error",
+            authSnapshot.dualUseWarning || Set.DUAL_USE_WARNING));
+        panel.appendChild(el("p", "mp-cyber-panel-copy",
+            report.title + ": " + report.message));
+        panel.appendChild(el("p", "mp-cyber-panel-copy",
+            "This panel asks for no target, template, landing page, credential harvester, or payload. SET is launched with no arguments; any later action inside the tool remains the operator's responsibility and must stay inside the authorized scope."));
+
+        if (prepared.status === "missing-tool") {
+            panel.appendChild(fallbackBox(prepared.fallback || report));
+            containerStatus(panel, prepared.reason);
+            return;
+        }
+
+        var confirmLabel = el("label", "mp-cyber-checkbox");
+        var confirm = el("input");
+        confirm.type = "checkbox";
+        confirm.id = "mp-set-launch-confirmed";
+        confirm.checked = state.set.confirmed;
+        confirm.addEventListener("change", function () {
+            state.set.confirmed = confirm.checked;
+            render();
+        });
+        confirmLabel.appendChild(confirm);
+        confirmLabel.appendChild(document.createTextNode(
+            authSnapshot.setConfirmationLabel ||
+                "I confirm this SET launch is limited to systems I own or am explicitly authorized in writing to test."));
+        panel.appendChild(confirmLabel);
+
+        var request = setRequest();
+        var validation = el("p", "mp-cyber-error", request.ok ? "" : request.reason);
+        validation.hidden = request.ok;
+        panel.appendChild(validation);
+
+        var run = el("button", "mp-cyber-button mp-cyber-button--accent", "Launch SET (explicit)");
+        run.type = "button";
+        run.id = "mp-set-launch";
+        run.disabled = prepared.status !== "ready" || !request.ok;
+        run.addEventListener("click", function () {
+            var plan = setRequest();
+            if (!plan.ok) {
+                state.lastStatus = plan.reason;
+                render();
+                return;
+            }
+            var result = state.surface.runner.start("set", {
+                confirmed: true,
+                args: plan.args,
+                metadata: {
+                    launch: "explicit",
+                    generatedContent: false
+                }
+            });
+            if (result.status !== "started") {
+                state.lastStatus = result.status +
+                    (result.reason ? ": " + result.reason : "");
+                render();
+                return;
+            }
+            state.set.resultText =
+                "SET launch requested by explicit operator action. No target, template, or payload was supplied.";
+            state.lastStatus = "SET launch requested.";
+            render();
+        });
+        panel.appendChild(run);
+
+        var resultBox = el("pre", "mp-cyber-status", state.set.resultText);
+        resultBox.id = "mp-set-result";
+        panel.appendChild(resultBox);
+
+        containerStatus(panel, state.lastStatus ||
+            (prepared.status === "ready"
+                ? "Ready. Review the authorized scope, acknowledge authorization, enable lab mode, tick the confirmation, then click Launch SET."
+                : prepared.reason));
+    }
+
+    function containerStatus(panel, textValue) {
+        var status = el("pre", "mp-cyber-status", textValue);
+        status.id = "mp-cyber-status";
+        panel.appendChild(status);
     }
 
     function renderNmapPanel(panel, tab, prepared) {
@@ -394,6 +517,12 @@
         }
 
         var prepared = state.surface.runner.prepare(tab.id);
+        if (tab.id === "set") {
+            renderSetPanel(panel, tab, prepared);
+            container.appendChild(panel);
+            return;
+        }
+
         if (prepared.status === "missing-tool") {
             panel.appendChild(fallbackBox(prepared.fallback));
             container.appendChild(panel);

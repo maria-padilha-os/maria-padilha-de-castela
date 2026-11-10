@@ -148,10 +148,12 @@ verify_profile() {
         airootfs/usr/share/maria-padilha/cyber/src/authorization.js \
         airootfs/usr/share/maria-padilha/cyber/src/runner.js \
         airootfs/usr/share/maria-padilha/cyber/src/nmap.js \
+        airootfs/usr/share/maria-padilha/cyber/src/set.js \
         airootfs/usr/share/maria-padilha/cyber/src/theme.css \
         airootfs/usr/share/maria-padilha/cyber/qml/CyberShell.qml \
         airootfs/usr/share/maria-padilha/cyber/qml/ToolPanelFrame.qml \
         airootfs/usr/share/maria-padilha/cyber/qml/NmapPanel.qml \
+        airootfs/usr/share/maria-padilha/cyber/qml/SetPanel.qml \
         efiboot/loader/loader.conf \
         efiboot/loader/entries/01-maria-padilha-de-castela-linux.conf \
         syslinux/syslinux.cfg

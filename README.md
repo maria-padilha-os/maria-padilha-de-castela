@@ -87,12 +87,12 @@ dashboard. They are exposed only when the build is private **and** the
 dashboard is not mounted from this surface.
 
 The manifest registers Nmap, SET, Wireshark/forensics, and the lab/VM launcher.
-Every tab has `"autoRun": false`. SET is registered for transparency but is
-policy-blocked and is not shipped; the tab never renders a launch control. A
-missing tool produces a structured fallback instead of failing the surface, and
-no command is run. Every offensive panel renders the shared authorization
-banner, lab-mode switch, target-scope indicator, and Stop/Clear actions from one
-frame, so the controls cannot be omitted.
+Every tab has `"autoRun": false`. SET is a dual-use launcher/status panel for an
+operator-installed copy; the package is not shipped, and the tab never generates
+attack content. A missing tool produces a structured fallback instead of failing
+the surface, and no command is run. Every offensive panel renders the shared
+authorization banner, lab-mode switch, target-scope indicator, and Stop/Clear
+actions from one frame, so the controls cannot be omitted.
 
 Authorization is fail-closed: written authorization must be acknowledged, lab
 mode cannot be enabled before that, and a bounded target scope is required
@@ -112,10 +112,21 @@ escalation. See [`frontend/cyber/src/nmap.js`](frontend/cyber/src/nmap.js) and
 the fixture-based tests in
 [`frontend/cyber/test/nmap.test.cjs`](frontend/cyber/test/nmap.test.cjs).
 
+The SET tab detects whether `setoolkit` is present and explains that SET is
+dual-use and may only be used on systems the operator owns or is explicitly
+authorized in writing to test. It has no default target, no pre-filled template
+or argument, and no automatic execution. The launcher stays locked until the
+shared authorization gates and a separate SET confirmation are satisfied, and
+the launch plan is always empty: no target, template, phishing page, credential
+harvester, or payload. The runner also refuses those inputs. See
+[`frontend/cyber/src/set.js`](frontend/cyber/src/set.js) and
+[`frontend/cyber/test/set.test.cjs`](frontend/cyber/test/set.test.cjs).
+
 See [`frontend/cyber/README.md`](frontend/cyber/README.md) for the manifest,
 feature-flag, QML/browser integration, and tests. `tests/cyber-frontend.sh`
 checks the manifest, tab enable/disable, missing-tool fallback, authorization
-state, image mirror, no-auto-run rule, and the no-palette rule.
+state, image mirror, no-auto-run rule, the SET no-default-action rule, and the
+no-palette rule.
 
 ## Build
 

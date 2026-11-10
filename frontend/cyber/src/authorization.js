@@ -51,6 +51,12 @@ function AuthorizationState(config) {
     this.labConfirmationLabel = nonEmpty(config.labConfirmationLabel)
         ? config.labConfirmationLabel
         : "I confirm this scan targets an authorized lab or private network.";
+    this.setConfirmationLabel = nonEmpty(config.setConfirmationLabel)
+        ? config.setConfirmationLabel
+        : "I confirm this SET launch is limited to systems I own or am explicitly authorized in writing to test.";
+    this.dualUseWarning = nonEmpty(config.dualUseWarning)
+        ? config.dualUseWarning
+        : "SET is a dual-use social-engineering framework. Use it only on owned systems or with explicit written permission.";
     this.targetScopeLabel = nonEmpty(config.targetScopeLabel)
         ? config.targetScopeLabel
         : "Target scope";
@@ -84,6 +90,8 @@ AuthorizationState.prototype._snapshot = function () {
         acknowledgement: this.acknowledgement,
         labModeLabel: this.labModeLabel,
         labConfirmationLabel: this.labConfirmationLabel,
+        setConfirmationLabel: this.setConfirmationLabel,
+        dualUseWarning: this.dualUseWarning,
         targetScopeLabel: this.targetScopeLabel,
         stopLabel: this.stopLabel,
         clearLabel: this.clearLabel,

@@ -20,6 +20,50 @@ function nonEmpty(value) {
     return typeof value === "string" && value.trim().length > 0;
 }
 
+function hasProvided(value) {
+    if (value === null || typeof value === "undefined" || value === false) {
+        return false;
+    }
+    if (typeof value === "string") {
+        return value.trim().length > 0;
+    }
+    if (Array.isArray(value)) {
+        return value.length > 0;
+    }
+    if (isObject(value)) {
+        return Object.keys(value).length > 0;
+    }
+    return true;
+}
+
+/*
+ * Some tabs, such as SET, have no operator-supplied arguments, target,
+ * templates, or payloads. Their manifest launch policy is enforced here so a
+ * caller cannot bypass the panel and smuggle content into the runner.
+ */
+function launchRestriction(tab, options) {
+    var launch = isObject(tab.launch) ? tab.launch : null;
+    if (!launch) {
+        return "";
+    }
+    if (launch.allowArguments === false && hasProvided(options.args)) {
+        return "this tab does not accept launch arguments";
+    }
+    if (launch.allowTarget === false &&
+        (hasProvided(options.target) || hasProvided(options.targets))) {
+        return "this tab does not accept a target";
+    }
+    if (launch.allowTemplates === false &&
+        (hasProvided(options.template) || hasProvided(options.templates))) {
+        return "this tab does not accept templates";
+    }
+    if (launch.allowPayloads === false &&
+        (hasProvided(options.payload) || hasProvided(options.payloads))) {
+        return "this tab does not accept payloads";
+    }
+    return "";
+}
+
 function ToolRunner(options) {
     options = isObject(options) ? options : {};
     this.registry = options.registry || null;
@@ -74,8 +118,8 @@ ToolRunner.prototype._probeTool = function (tab) {
 /*
  * Prepare a tab without executing anything. The probe is a host-supplied
  * availability check, not the tool itself. Returns one of:
- *   ready, tab-disabled, missing-tool, policy-blocked, unauthorized,
- *   executor-not-configured.
+ *   ready, tab-disabled, missing-tool, policy-blocked, launch-restricted,
+ *   unauthorized, executor-not-configured.
  */
 ToolRunner.prototype.prepare = function (tabId, options) {
     options = options || {};
@@ -132,6 +176,17 @@ ToolRunner.prototype.prepare = function (tabId, options) {
                 installHint: "Adding this tool requires a new policy review and tests proving phishing templates remain absent.",
                 autoRun: false
             }
+        });
+    }
+
+    var restricted = launchRestriction(tab, options);
+    if (restricted.length > 0) {
+        return this._finish({
+            status: "launch-restricted",
+            executed: false,
+            tabId: tabId,
+            reason: restricted,
+            autoRun: false
         });
     }
 

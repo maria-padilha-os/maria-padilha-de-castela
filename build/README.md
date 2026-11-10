@@ -178,7 +178,8 @@ release, no signing key.
 - The active `iso/` profile includes the private cyber frontend at
   `airootfs/usr/share/maria-padilha/cyber/` (source:
   [`frontend/cyber/`](../frontend/cyber/README.md)). This older reference-build
-  subtree does not duplicate the frontend. SET remains excluded by policy; its
-  tab is policy-blocked and renders no launch control.
+  subtree does not duplicate the frontend. The SET package remains excluded from
+  the image; its tab only detects an operator-installed copy and exposes an
+  explicitly confirmed dual-use launcher with no target, template, or payload.
 - Rolling repositories mean a later rebuild is not bit-identical without the
   package cache and recorded build environment.

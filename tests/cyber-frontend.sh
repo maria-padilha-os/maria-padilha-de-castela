@@ -29,6 +29,7 @@ for file in \
     "$src/src/authorization.js" \
     "$src/src/runner.js" \
     "$src/src/nmap.js" \
+    "$src/src/set.js" \
     "$src/src/theme.css" \
     "$src/src/cyber.css" \
     "$src/src/app.js" \
@@ -52,6 +53,7 @@ for file in \
     "$src/test/authorization.test.cjs" \
     "$src/test/runner.test.cjs" \
     "$src/test/nmap.test.cjs" \
+    "$src/test/set.test.cjs" \
     "$src/test/fixtures/nmap-basic.xml" \
     "$src/test/fixtures/nmap-error.xml" \
     "$src/test/fixtures/nmap-timeout.xml" \
@@ -71,6 +73,7 @@ mirror_files=(
     src/authorization.js
     src/runner.js
     src/nmap.js
+    src/set.js
     src/theme.css
     src/cyber.css
     src/app.js
@@ -168,6 +171,45 @@ for forbidden in ' -sS' ' -sU' ' -O ' ' -A ' '--script'; do
         ok "Nmap module excludes $forbidden"
     fi
 done
+
+# SET is a dual-use status/launcher panel. It must detect the tool, explain the
+# authorized-lab boundary, and expose no default target, template, or action.
+for term in \
+    'prepareLaunch' \
+    'statusReport' \
+    'dualUseWarning' \
+    'generatedContent' \
+    'setConfirmationLabel' \
+    'defaultTarget' \
+    'defaultArgs'
+do
+    if grep -RqF -- "$term" "$src/src/set.js" "$src/qml/SetPanel.qml" "$src/src/app.js" "$src/manifest.json"; then
+        ok "SET extension contains $term"
+    else
+        bad "SET extension is missing $term"
+    fi
+done
+
+if grep -qF -- '"dualUse": true' "$src/manifest.json" &&
+    grep -qF -- '"shipsAttackContent": false' "$src/manifest.json" &&
+    grep -qF -- '"allowArguments": false' "$src/manifest.json" &&
+    grep -qF -- '"allowTarget": false' "$src/manifest.json"; then
+    ok "SET manifest is dual-use and content-free"
+else
+    bad "SET manifest does not declare the dual-use/content-free launcher"
+fi
+
+if grep -qF -- '"args": []' "$src/manifest.json"; then
+    ok "SET manifest has no pre-filled launch arguments"
+else
+    bad "SET manifest has pre-filled or missing launch arguments"
+fi
+
+if grep -RqE -- '<form|<input[^>]+type=["'"'"'](email|password)' "$src/src/set.js" "$src/qml/SetPanel.qml"; then
+    bad "SET extension contains a credential-capture form"
+else
+    ok "SET extension ships no credential-capture form"
+fi
 
 # No palette literal in component CSS or QML. The theme file is allowed only
 # semantic aliases too, so it is included.

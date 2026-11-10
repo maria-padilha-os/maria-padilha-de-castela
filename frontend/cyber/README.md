@@ -47,13 +47,13 @@ CyberShell {
 | tab id | title | behavior |
 | --- | --- | --- |
 | `nmap` | Nmap | explicit, operator-started mapping |
-| `set` | SET | registered but policy-blocked; no launch control |
+| `set` | SET | dual-use status/launcher; explicit, authorized confirmation only |
 | `forensics` | Wireshark / Forensics | capture-file inspection, no auto-capture |
 | `lab-vm` | Lab / VM | isolated launcher, no auto-boot |
 
 Every tab declares `"autoRun": false`. The manifest loader rejects a tab that
 tries to auto-run, uses a panel outside the panel namespace, omits a shared
-control, or duplicates an id.
+control, duplicates an id, or pre-fills launch arguments.
 
 Tabs can be enabled and disabled at runtime through `TabRegistry`:
 
@@ -65,8 +65,11 @@ registry.list({ includeDisabled: true });
 ```
 
 Disabling a tab removes it from the active list but keeps it visible to
-operators as disabled. The SET tab has `"policy.admitted": false`; the runner
-returns `policy-blocked` and never renders a launch control for it.
+operators as disabled. The SET tab is admitted only as an explicit dual-use
+launcher: it has an empty launch argument list, refuses targets/templates/
+payloads in both the panel and the runner, and never renders an enabled launch
+control until the shared authorization gates and the SET confirmation are
+satisfied.
 
 ## Shared safety controls
 
@@ -155,6 +158,30 @@ XML, DTD entity declarations, unknown entities, Nmap `exit="error"`, and
 the result into the plain-text host/port/service summary shown by both surfaces.
 Timeouts are reported explicitly and never become an empty "success".
 
+## SET extension
+
+The SET tab is a launcher/status panel for the Social-Engineer Toolkit, not a
+content generator. SET is **dual-use** and is **not shipped** in the image. The
+tab detects an operator-installed copy through the host probe:
+
+- if SET is missing, it shows the structured missing-tool fallback, keeps the
+  shared controls visible, and runs nothing;
+- if SET is present, it shows the dual-use warning and keeps the launch control
+  disabled until written authorization is acknowledged, lab mode is on, a
+  bounded target scope is set, and the operator ticks the separate SET
+  confirmation.
+
+The SET launch plan has no target, no template, no landing page, no credential
+harvester, no payload, and an empty argument list. [`src/set.js`](src/set.js)
+rejects any caller-supplied arguments, target, templates, pages, or payload
+content, and the manifest marks the tab with `allowArguments`, `allowTarget`,
+`allowTemplates`, and `allowPayloads` all `false`. The runner enforces those
+restrictions as well, so bypassing the panel does not bypass the policy. The
+panel never starts SET on load, on tab activation, or on a timer; only the
+explicit button calls the confirmed start path. Any later module selection
+inside SET remains the operator's responsibility and must stay inside the
+authorized scope.
+
 ## Missing tools and no auto-run
 
 The runner probes tool availability through a host-supplied function. A missing
@@ -200,11 +227,16 @@ lab-mode state, the browser/QML shared controls, and the no-hardcoded-palette
 rule. The Nmap tests add fixture XML for success, error, and timeout results plus
 argument validation, public-target refusal, scope containment, option/profile
 allowlists, and a check that the module ships no process spawner or network
-client. They never run a live scan.
+client. The SET tests cover missing-tool fallback, dual-use status reporting,
+and the no-default-action guarantee: no default target, template, payload, or
+argument, and no execution without explicit confirmation plus the authorization
+gates. They never run SET, start a live scan, or contact an external host.
 
 ## Boundary
 
 Use this surface only on systems you own or for which you hold explicit, written
 permission. The surface does not grant authorization, does not discover targets,
-does not bundle phishing templates, and does not start a scan, capture, VM, or
-service by itself.
+does not bundle phishing templates or attack content, and does not start a scan,
+SET launch, capture, VM, or service by itself. SET is dual-use: the launcher is
+only a controlled front end for an operator-installed copy, and the operator is
+responsible for staying inside the authorized scope.

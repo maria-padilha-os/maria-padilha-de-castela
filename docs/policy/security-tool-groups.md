@@ -79,10 +79,13 @@ The following are **not shipped and not offered by the installer**:
 - network login brute-force tools such as Hydra or Medusa;
 - any package in [`iso/denylist.txt`](../../iso/denylist.txt).
 
-The private cyber frontend registers a SET tab for transparency, but the tab is
-`"policy.admitted": false`, renders no launch control, and cannot be started by
-the tool runner. A missing SET binary is just a missing-tool fallback; the
-frontend never installs or runs it.
+The SET package remains excluded from the image and the installer. The private
+cyber frontend detects an operator-installed SET through the host probe and
+exposes a dual-use launcher/status panel. That panel has no default target,
+template, or argument, generates no attack content, and refuses caller-supplied
+target/template/payload content; launching requires the shared authorization
+gates plus a separate explicit confirmation. A missing SET binary is just a
+missing-tool fallback. The frontend never installs SET.
 
 The Password Auditing group is deliberately offline-only: John the Ripper,
 Hashcat, Hashcat-utils, Crunch, Ophcrack, fcrackzip, pdfcrack, and Hashid work

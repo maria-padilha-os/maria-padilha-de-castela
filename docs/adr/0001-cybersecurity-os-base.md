@@ -57,10 +57,12 @@ verification checklist live in [`build/README.md`](../../build/README.md).
 The initial scope is a console-capable base plus installer and a small set of
 network-analysis, forensics, and isolated-lab packages. Desktop and panel
 packages come from `maria-padilha-de`; the security-specific scope is not a
-second desktop stack. The Social-Engineer Toolkit (SET) is **not** in the
-reference build. It may only be reconsidered after the phishing-template and
-credential-capture controls in the authorized-use policy are implemented and
-tested.
+second desktop stack. The Social-Engineer Toolkit (SET) package is **not** in
+the reference build. The cyber frontend exposes only a dual-use launcher/status
+panel for an operator-installed copy: no bundled target, template, or payload,
+explicit confirmation, and the shared authorization gates. Admitting the SET
+package itself still requires a separate policy review after the
+phishing-template and credential-capture controls are verified.
 
 ## Alternatives considered
 
@@ -252,8 +254,8 @@ and the profile in that directory:
 - a small set of reviewed tools: `nmap`, `wireshark-qt`, `sleuthkit`, and
   isolated-lab virtualization (`qemu-desktop`, `libvirt`, `virt-manager`,
   `firejail`);
-- no SET, no phishing templates, no credential-theft packages, and no default
-  scan services or timers;
+- no SET package, no phishing templates, no credential-theft packages, and no
+  default scan services or timers;
 - an explicit authorized-use banner in `/etc/issue` and `/etc/motd`.
 
 The reference build is intentionally **not** a release pipeline. Building it

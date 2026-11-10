@@ -127,6 +127,29 @@ function validateTool(tab, where) {
     });
 }
 
+function validateLaunch(tab, where) {
+    if (typeof tab.launch === "undefined") {
+        return;
+    }
+    if (!isObject(tab.launch)) {
+        fail(where + ".launch must be an object when present");
+    }
+    if (typeof tab.launch.args !== "undefined") {
+        if (!Array.isArray(tab.launch.args)) {
+            fail(where + ".launch.args must be an array");
+        }
+        if (tab.launch.args.length > 0) {
+            fail(where + ".launch.args must be empty; no pre-filled arguments are allowed");
+        }
+    }
+    ["allowArguments", "allowTarget", "allowTemplates", "allowPayloads"].forEach(function (key) {
+        if (typeof tab.launch[key] !== "undefined" &&
+            typeof tab.launch[key] !== "boolean") {
+            fail(where + ".launch." + key + " must be a boolean when present");
+        }
+    });
+}
+
 function loadManifest(input) {
     var manifest = input;
 
@@ -207,6 +230,7 @@ function loadManifest(input) {
         }
         validateControlList(tab, where);
         validateTool(tab, where);
+        validateLaunch(tab, where);
         if (tab.policy && tab.policy.admitted === true && tab.autoRun !== false) {
             fail(where + " is admitted by policy but would auto-run");
         }

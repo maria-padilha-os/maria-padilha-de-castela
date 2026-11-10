@@ -37,12 +37,22 @@ test("manifest exposes exactly the four requested cyber tabs", () => {
     }
 });
 
-test("SET is registered but blocked by policy", () => {
+test("SET is an admitted dual-use launcher with no default content", () => {
     const manifest = Registry.loadManifest(manifestText);
     const setTab = manifest.tabs.find((tab) => tab.id === "set");
     assert.ok(setTab);
-    assert.equal(setTab.policy.admitted, false);
-    assert.match(setTab.policy.reason, /phishing|credential|policy/i);
+    assert.equal(setTab.policy.admitted, true);
+    assert.equal(setTab.policy.dualUse, true);
+    assert.equal(setTab.policy.shipsAttackContent, false);
+    assert.equal(setTab.autoRun, false);
+    assert.deepEqual(setTab.launch.args, []);
+    assert.equal(setTab.launch.allowArguments, false);
+    assert.equal(setTab.launch.allowTarget, false);
+    assert.equal(setTab.launch.allowTemplates, false);
+    assert.equal(setTab.launch.allowPayloads, false);
+    assert.match(manifest.authorization.dualUseWarning, /dual-use/i);
+    assert.match(manifest.authorization.setConfirmationLabel, /own|authorized/i);
+    assert.match(setTab.tool.installHint, /not shipped/i);
 });
 
 test("private build plus feature flag exposes the namespace", () => {
@@ -117,4 +127,8 @@ test("invalid manifests fail closed", () => {
     const wrongPanel = JSON.parse(JSON.stringify(base));
     wrongPanel.tabs[0].panel = "normal.desktop.nmap";
     assert.throws(() => Registry.loadManifest(wrongPanel), /panel must live under/);
+
+    const prefilledLaunch = JSON.parse(JSON.stringify(base));
+    prefilledLaunch.tabs.find((tab) => tab.id === "set").launch.args = ["--attack"];
+    assert.throws(() => Registry.loadManifest(prefilledLaunch), /no pre-filled arguments/);
 });

@@ -98,9 +98,12 @@ Stop/Clear actions. Lab mode requires an acknowledged written-authorization
 reference, and the runner refuses to start without a bounded scope. The Nmap tab
 additionally canonicalizes and allowlists its target, refuses public ranges by
 default, exposes only documented unprivileged profiles/options, and requires a
-separate authorized-lab confirmation for each scan. A missing tool produces a
-fallback and no command is run. SET remains registered for transparency but is
-policy-blocked and has no launch control. No scanner, capture, VM, or service
+separate authorized-lab confirmation for each scan. The SET tab is a dual-use
+launcher/status panel for an operator-installed copy, not a content generator:
+it has no default target, template, or argument, refuses any caller-supplied
+target/template/payload content, and stays locked until the shared authorization
+gates plus a separate SET confirmation are satisfied. A missing tool produces a
+fallback and no command is run. No scanner, SET launch, capture, VM, or service
 starts automatically.
 
 ### Tool admission
@@ -121,9 +124,12 @@ tool is needed, what its defaults are, and how misuse is constrained. A denylist
 of known credential-theft and phishing packages is maintained alongside the
 allowlist, but the allowlist is the primary control.
 
-The initial reference build deliberately excludes SET and any phishing kit.
-Adding a tool that can generate phishing content requires a new policy review,
-removal of bundled templates, and a test proving the templates are absent.
+The image deliberately excludes the SET package and any phishing kit. The cyber
+frontend may only detect an operator-installed SET and expose an explicitly
+confirmed launcher with no bundled template, target, or payload; the package
+itself is still not shipped. Adding a tool that can generate phishing content
+requires a new policy review, removal of bundled templates, and a test proving
+the templates are absent.
 
 ### Data handling
 

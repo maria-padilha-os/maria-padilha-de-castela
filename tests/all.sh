@@ -40,6 +40,7 @@ for f in \
   build/archiso/profile/airootfs/etc/calamares/modules/packagechooser.conf \
   build/archiso/profile/airootfs/etc/calamares/modules/packages.conf \
   docs/policy/security-tool-groups.md \
+  docs/policy/forensics-capabilities.md \
   tests/security-groups.sh \
   tests/cyber-frontend.sh \
   frontend/cyber/manifest.json \
@@ -48,15 +49,21 @@ for f in \
   frontend/cyber/src/runner.js \
   frontend/cyber/src/nmap.js \
   frontend/cyber/src/set.js \
+  frontend/cyber/src/forensics.js \
   frontend/cyber/qml/CyberShell.qml \
   frontend/cyber/qml/ToolPanelFrame.qml \
   frontend/cyber/qml/NmapPanel.qml \
   frontend/cyber/qml/SetPanel.qml \
+  frontend/cyber/qml/ForensicsPanel.qml \
   frontend/cyber/test/nmap.test.cjs \
   frontend/cyber/test/set.test.cjs \
+  frontend/cyber/test/forensics.test.cjs \
   frontend/cyber/test/fixtures/nmap-basic.xml \
   frontend/cyber/test/fixtures/nmap-error.xml \
-  frontend/cyber/test/fixtures/nmap-timeout.xml
+  frontend/cyber/test/fixtures/nmap-timeout.xml \
+  frontend/cyber/test/fixtures/generate-pcap.cjs \
+  frontend/cyber/test/fixtures/lab-capture.pcap \
+  frontend/cyber/test/fixtures/tshark-sensitive.json
 do
   require_file "$f"
 done
@@ -90,6 +97,21 @@ for term in \
   'target scope'
 do
   require_text "$policy" "$term"
+done
+
+# Wireshark/forensics capability and revocation boundary
+forensics=docs/policy/forensics-capabilities.md
+for term in \
+  'CAP_NET_RAW' \
+  'CAP_NET_ADMIN' \
+  'setcap' \
+  'revoke' \
+  'no root' \
+  'packet injection' \
+  'upload' \
+  'tshark'
+do
+  require_text "$forensics" "$term"
 done
 
 # Legal, licensing, and export review

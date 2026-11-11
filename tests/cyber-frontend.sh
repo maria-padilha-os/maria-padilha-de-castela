@@ -30,6 +30,7 @@ for file in \
     "$src/src/runner.js" \
     "$src/src/nmap.js" \
     "$src/src/set.js" \
+    "$src/src/forensics.js" \
     "$src/src/theme.css" \
     "$src/src/cyber.css" \
     "$src/src/app.js" \
@@ -54,9 +55,13 @@ for file in \
     "$src/test/runner.test.cjs" \
     "$src/test/nmap.test.cjs" \
     "$src/test/set.test.cjs" \
+    "$src/test/forensics.test.cjs" \
     "$src/test/fixtures/nmap-basic.xml" \
     "$src/test/fixtures/nmap-error.xml" \
     "$src/test/fixtures/nmap-timeout.xml" \
+    "$src/test/fixtures/generate-pcap.cjs" \
+    "$src/test/fixtures/lab-capture.pcap" \
+    "$src/test/fixtures/tshark-sensitive.json" \
     "$src/test/theme.test.cjs"
 do
     require_file "$file"
@@ -74,6 +79,7 @@ mirror_files=(
     src/runner.js
     src/nmap.js
     src/set.js
+    src/forensics.js
     src/theme.css
     src/cyber.css
     src/app.js
@@ -209,6 +215,73 @@ if grep -RqE -- '<form|<input[^>]+type=["'"'"'](email|password)' "$src/src/set.j
     bad "SET extension contains a credential-capture form"
 else
     ok "SET extension ships no credential-capture form"
+fi
+
+# The forensics tab must use tshark, require explicit capture/open actions, keep
+# the interface/path/filter allowlists, redact sensitive payloads, and expose no
+# injection or upload path.
+for term in \
+    'validateInterface' \
+    'buildCaptureRequest' \
+    'prepareCapture' \
+    'buildStopRequest' \
+    'buildOpenRequest' \
+    'prepareOpen' \
+    'parseTsharkJson' \
+    'interpretCaptureResult' \
+    'redactSensitive' \
+    'CAP_NET_RAW' \
+    'CAP_NET_ADMIN' \
+    'SIGINT' \
+    'captureConfirmationLabel' \
+    'sensitivePayloadWarning' \
+    'No capture data was uploaded'
+do
+    if grep -RqF -- "$term" "$src/src/forensics.js" "$src/qml/ForensicsPanel.qml" "$src/src/app.js" "$src/manifest.json"; then
+        ok "forensics extension contains $term"
+    else
+        bad "forensics extension is missing $term"
+    fi
+done
+
+for term in \
+    '"readOnly": true' \
+    '"packetInjection": false' \
+    '"uploads": false' \
+    '"autoUpload": false' \
+    '"autoCapture": false' \
+    '"sensitivePayloads": "redact-and-warn"' \
+    '"commands": [' \
+    'tshark'
+do
+    if grep -qF -- "$term" "$src/manifest.json"; then
+        ok "forensics manifest contains $term"
+    else
+        bad "forensics manifest is missing $term"
+    fi
+done
+
+if grep -qF -- 'tshark' "$src/src/forensics.js" &&
+    grep -qF -- '"-r"' "$src/src/forensics.js" &&
+    grep -qF -- '"-T", "json"' "$src/src/forensics.js"; then
+    ok "forensics opens captures read-only through tshark JSON"
+else
+    bad "forensics does not open captures read-only through tshark"
+fi
+
+for forbidden in 'tcpreplay' 'scapy' 'sendp(' '--inject' 'child_process' 'XMLHttpRequest'; do
+    if grep -RqF -- "$forbidden" "$src/src/forensics.js" "$src/qml/ForensicsPanel.qml"; then
+        bad "forensics extension contains forbidden upload/injection/spawn term: $forbidden"
+    else
+        ok "forensics extension excludes $forbidden"
+    fi
+done
+
+if grep -RqF -- 'autoUpload: true' "$src/src/forensics.js" ||
+    grep -RqF -- 'packetInjection: true' "$src/src/forensics.js"; then
+    bad "forensics module enables upload or packet injection"
+else
+    ok "forensics module never enables upload or packet injection"
 fi
 
 # No palette literal in component CSS or QML. The theme file is allowed only

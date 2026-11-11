@@ -21,6 +21,8 @@ Rectangle {
     property string manifestUrl: Qt.resolvedUrl("../manifest.json")
     property var probe: null
     property var executor: null
+    property var stopExecutor: null
+    property var interfaces: []
 
     property var manifest: null
     property var registry: null
@@ -145,7 +147,8 @@ Rectangle {
                 registry: registry,
                 authorization: authorization,
                 probe: probe,
-                execute: executor
+                execute: executor,
+                stop: stopExecutor
             });
             surface = {
                 enabled: true,

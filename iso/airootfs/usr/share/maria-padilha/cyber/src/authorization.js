@@ -54,6 +54,15 @@ function AuthorizationState(config) {
     this.setConfirmationLabel = nonEmpty(config.setConfirmationLabel)
         ? config.setConfirmationLabel
         : "I confirm this SET launch is limited to systems I own or am explicitly authorized in writing to test.";
+    this.captureConfirmationLabel = nonEmpty(config.captureConfirmationLabel)
+        ? config.captureConfirmationLabel
+        : "I confirm this capture and any opened pcap are limited to traffic, systems, and media I own or am explicitly authorized in writing to examine.";
+    this.openConfirmationLabel = nonEmpty(config.openConfirmationLabel)
+        ? config.openConfirmationLabel
+        : "I confirm this capture file is local, I am authorized to examine it, and it will not be uploaded or transmitted.";
+    this.sensitivePayloadWarning = nonEmpty(config.sensitivePayloadWarning)
+        ? config.sensitivePayloadWarning
+        : "Captures can contain credentials, tokens, cookies, private keys, and personal data. Payloads and sensitive fields are redacted from the summary, but the raw capture remains sensitive. Never upload or auto-transmit a capture.";
     this.dualUseWarning = nonEmpty(config.dualUseWarning)
         ? config.dualUseWarning
         : "SET is a dual-use social-engineering framework. Use it only on owned systems or with explicit written permission.";
@@ -91,6 +100,9 @@ AuthorizationState.prototype._snapshot = function () {
         labModeLabel: this.labModeLabel,
         labConfirmationLabel: this.labConfirmationLabel,
         setConfirmationLabel: this.setConfirmationLabel,
+        captureConfirmationLabel: this.captureConfirmationLabel,
+        openConfirmationLabel: this.openConfirmationLabel,
+        sensitivePayloadWarning: this.sensitivePayloadWarning,
         dualUseWarning: this.dualUseWarning,
         targetScopeLabel: this.targetScopeLabel,
         stopLabel: this.stopLabel,

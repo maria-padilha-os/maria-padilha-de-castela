@@ -64,6 +64,14 @@ The following are prohibited in the image and in any future panel:
   entry, or Calamares post-install hook invokes a scanner.
 - **No automatic target discovery.** The image must not populate a target list
   from the local network, captured traffic, or an external service.
+- **No automatic capture, injection, or upload.** No interface is captured on
+  boot, login, installer completion, or tab activation. The forensics panel
+  requires an explicit operator action and a separate confirmation before a
+  capture, sends `SIGINT` to stop it, opens pcaps read-only, has no packet
+  injection or replay path, and never uploads or transmits a capture. Captures
+  may contain credentials and other sensitive payloads; the panel redacts its
+  summary, but the raw file remains sensitive and local. See
+  [`forensics-capabilities.md`](forensics-capabilities.md).
 - **No bundled phishing templates.** No email templates, landing pages, SMS or
   messaging pretexts, credential-capture forms, or cloneable login pages are
   shipped. Tools that include such material must have it removed or disabled

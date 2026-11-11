@@ -26,6 +26,7 @@ Read next:
 
 - [Authorized-use boundary](docs/policy/authorized-use.md)
 - [Authorized security tool groups](docs/policy/security-tool-groups.md)
+- [Wireshark/forensics capabilities and revocation](docs/policy/forensics-capabilities.md)
 - [Legal, licensing, and export considerations](docs/policy/legal-licensing-export.md)
 - [Reference build](build/README.md)
 
@@ -122,11 +123,26 @@ harvester, or payload. The runner also refuses those inputs. See
 [`frontend/cyber/src/set.js`](frontend/cyber/src/set.js) and
 [`frontend/cyber/test/set.test.cjs`](frontend/cyber/test/set.test.cjs).
 
+The Wireshark/forensics tab is an explicit local capture and read-only pcap
+inspection panel. It accepts one validated interface and a new local capture
+path, then builds a fixed `tshark` argv with `shell: false`; Stop sends `SIGINT`
+to the host-started capture. Opening a pcap uses `tshark -n -r <file> -T json`
+and never rewrites the file. Payload fields and credential patterns are redacted
+from the summary and the panel warns that the raw capture remains sensitive.
+There is no packet-injection, replay, upload, or auto-transmit path, and no
+capture starts automatically. Live capture may use `CAP_NET_RAW`/`CAP_NET_ADMIN`
+on the narrow helper, or a distribution capture group; **no root is required by
+default**. See [`frontend/cyber/src/forensics.js`](frontend/cyber/src/forensics.js),
+[`frontend/cyber/test/forensics.test.cjs`](frontend/cyber/test/forensics.test.cjs),
+and [the capability/revocation document](docs/policy/forensics-capabilities.md).
+The tests use a generated pcap fixture with synthetic sensitive content and
+never perform a live capture.
+
 See [`frontend/cyber/README.md`](frontend/cyber/README.md) for the manifest,
 feature-flag, QML/browser integration, and tests. `tests/cyber-frontend.sh`
 checks the manifest, tab enable/disable, missing-tool fallback, authorization
-state, image mirror, no-auto-run rule, the SET no-default-action rule, and the
-no-palette rule.
+state, image mirror, no-auto-run rule, the SET no-default-action rule, the
+forensics read-only/no-injection/no-upload rules, and the no-palette rule.
 
 ## Build
 

@@ -1,0 +1,46 @@
+[
+  {
+    "_index": "packets-1",
+    "_source": {
+      "layers": {
+        "frame.number": "1",
+        "frame.time": "2026-01-01 00:00:00.123456000 UTC",
+        "frame.len": "361",
+        "frame.protocols": "eth:ethertype:ip:tcp:http",
+        "_ws.col.Protocol": "HTTP",
+        "_ws.col.Info": "GET /login?token=fixture-token-value HTTP/1.1",
+        "eth.src": "02:00:00:00:00:01",
+        "eth.dst": "02:00:00:00:00:02",
+        "ip.src": "192.0.2.10",
+        "ip.dst": "192.0.2.20",
+        "tcp.srcport": "49152",
+        "tcp.dstport": "80",
+        "http.request.method": "GET",
+        "http.host": "lab-vm.example",
+        "http.request.uri": "/login?token=fixture-token-value",
+        "http.user_agent": "maria-padilha-fixture/1.0",
+        "http.authorization": "Basic dXNlcjpwYXNzd29yZA==",
+        "http.cookie": "session=fixture-session-value",
+        "http.file_data": "password=hunter2&api_key=fixture-api-key"
+      }
+    }
+  },
+  {
+    "_index": "packets-2",
+    "_source": {
+      "layers": {
+        "frame.number": "2",
+        "frame.time": "2026-01-01 00:00:01.000000000 UTC",
+        "frame.len": "74",
+        "frame.protocols": "eth:ethertype:ip:tcp",
+        "_ws.col.Protocol": "TCP",
+        "_ws.col.Info": "49153 -> 443 [ACK] Seq=1 Ack=1 Win=64240 Len=0",
+        "ip.src": "192.0.2.10",
+        "ip.dst": "192.0.2.30",
+        "tcp.srcport": "49153",
+        "tcp.dstport": "443",
+        "tcp.flags": "0x0010"
+      }
+    }
+  }
+]

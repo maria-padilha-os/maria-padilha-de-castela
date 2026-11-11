@@ -87,6 +87,14 @@ target/template/payload content; launching requires the shared authorization
 gates plus a separate explicit confirmation. A missing SET binary is just a
 missing-tool fallback. The frontend never installs SET.
 
+The Wireshark/forensics panel is likewise explicit and local. It can open a pcap
+read-only through `tshark` and can start a live capture only after the shared
+authorization gates plus a separate confirmation. It has no packet-injection,
+replay, upload, or auto-transmit path. Live capture may use `CAP_NET_RAW` and
+`CAP_NET_ADMIN` on the narrow capture helper or a distribution capture group;
+no root is required by default. The required capabilities and their revocation
+are documented in [`forensics-capabilities.md`](forensics-capabilities.md).
+
 The Password Auditing group is deliberately offline-only: John the Ripper,
 Hashcat, Hashcat-utils, Crunch, Ophcrack, fcrackzip, pdfcrack, and Hashid work
 against files or hashes the operator already owns or is authorized to test.
@@ -132,7 +140,10 @@ The installer group selection is intentionally passive:
 - libvirtd, bluetooth, NetworkManager, and the desktop session are not enabled
   by the group configuration; only the existing greetd/NetworkManager/bluetooth
   live-image units are enabled by the profile;
-- no target list is populated from the local network or captured traffic.
+- no target list is populated from the local network or captured traffic;
+- no interface is captured, no capture file is uploaded, and no packet is
+  injected or replayed by the installer or the frontend; the Wireshark/forensics
+  tab requires an explicit operator action and a separate confirmation.
 
 A package being installed is not the same as a tool being run. The operator
 must still define an explicit target scope before starting any tool, and stop

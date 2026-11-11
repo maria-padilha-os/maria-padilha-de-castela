@@ -48,7 +48,7 @@ CyberShell {
 | --- | --- | --- |
 | `nmap` | Nmap | explicit, operator-started mapping |
 | `set` | SET | dual-use status/launcher; explicit, authorized confirmation only |
-| `forensics` | Wireshark / Forensics | capture-file inspection, no auto-capture |
+| `forensics` | Wireshark / Forensics | explicit local capture, read-only pcap inspection, redacted summary |
 | `lab-vm` | Lab / VM | isolated launcher, no auto-boot |
 
 Every tab declares `"autoRun": false`. The manifest loader rejects a tab that
@@ -182,6 +182,76 @@ explicit button calls the confirmed start path. Any later module selection
 inside SET remains the operator's responsibility and must stay inside the
 authorized scope.
 
+## Wireshark / forensics extension
+
+The forensics tab is a local, read-only inspection panel with an explicit live
+capture path. It uses `tshark` for both operations. Nothing is captured on load,
+on tab activation, or on a timer; opening a file or starting a capture requires
+the shared authorization gates plus a separate confirmation checkbox.
+
+### Live capture
+
+`buildCaptureRequest()` accepts one explicit interface, a new local capture path,
+and one allowlisted capture filter. It returns:
+
+```text
+tshark -n -i <interface> [-f <allowlisted filter>] -w <new path> -F pcapng
+```
+
+The argv is always passed with `shell: false`, and the request carries
+`overwrite: false`, `stopSignal: "SIGINT"`, `uploads: false`,
+`autoUpload: false`, and `packetInjection: false`. Interface names are validated;
+`any`, `all`, `*`, shell text, and leading dashes are refused. Capture paths must
+be local files ending in `.pcap`, `.pcapng`, or `.cap`; URLs, device nodes, and
+parent-directory traversal are refused. The host must refuse to overwrite an
+existing file.
+
+`buildStopRequest()` sends `SIGINT` (or explicitly `SIGTERM`) to the capture
+process. It never asks for a forced kill. The panel's Stop capture button calls
+the runner's explicit stop path, which may call the host-supplied `stop`
+callback; no timer or visibility change invokes it. The shared Stop/Clear
+control remains available on every tab.
+
+### Pcap inspection
+
+`buildOpenRequest()` builds `tshark -n -r <local file> -T json`. The file is
+opened read-only: the request has `readOnly: true` and `writeCapture: false`.
+`-n` disables name resolution, so inspection makes no DNS query. The parser
+accepts tshark's JSON array (also an object with `packets`, a single packet, or
+NDJSON) and extracts frame, address, port, protocol, HTTP, and TLS summary
+fields. Malformed JSON, missing output, errors, and timeouts fail closed with an
+`errors` array; they never become an empty success.
+
+### Sensitive payloads and no upload
+
+Every payload field (`data.data`, `tcp.payload`, `http.file_data`, and similar)
+is replaced with `[REDACTED]`. The parser also redacts `Authorization`,
+`Proxy-Authorization`, `Cookie`, `Set-Cookie`, `Basic`/`Bearer`/`Digest`
+credentials, password/token/secret/API-key assignments, URL user-info, and
+private-key blocks. If a packet contains payload or a sensitive field, the
+summary warns and marks the packet as redacted. The raw capture remains
+sensitive: keep it local, owner-only, and handle it according to the written
+authorization.
+
+The module has no network client, upload function, process spawner, or packet
+injection path. Requests with `upload`, `uploadUrl`, `remote`, `endpoint`, `url`,
+`webhook`, `telemetry`, `inject`, `injection`, `send`, `transmit`, or `spoof`
+fields are refused. Neither the browser surface nor the QML surface can upload or
+auto-transmit a capture.
+
+### Capabilities and revocation
+
+Live capture may use `CAP_NET_RAW` and `CAP_NET_ADMIN` on the narrow capture
+helper, or a distribution capture group. **No root is required by default**, and
+this repository never grants a capability, uses a privileged command, or starts
+a capture service. Read-only pcap inspection needs no special capability. The
+required capabilities, the no-root default, the host adapter contract, and the
+revocation steps (`setcap -r`, removing the capture group, re-checking
+`getcap`, and restarting the session) are documented in
+[`docs/policy/forensics-capabilities.md`](../../docs/policy/forensics-capabilities.md).
+The machine-readable summary is `Forensics.capabilityReport()` in
+[`src/forensics.js`](src/forensics.js).
+
 ## Missing tools and no auto-run
 
 The runner probes tool availability through a host-supplied function. A missing
@@ -230,7 +300,12 @@ allowlists, and a check that the module ships no process spawner or network
 client. The SET tests cover missing-tool fallback, dual-use status reporting,
 and the no-default-action guarantee: no default target, template, payload, or
 argument, and no execution without explicit confirmation plus the authorization
-gates. They never run SET, start a live scan, or contact an external host.
+gates. The forensics tests use a **generated pcap fixture**
+(`test/fixtures/generate-pcap.cjs`) with synthetic sensitive content; they check
+capture/open/stop argv, interface/path/filter validation, confirmation and
+authorization gates, refusal of upload/injection fields, payload and credential
+redaction, and malformed/timeout/error handling. They never run tshark, open a
+live interface, capture traffic, or contact an external host.
 
 ## Boundary
 
@@ -239,4 +314,7 @@ permission. The surface does not grant authorization, does not discover targets,
 does not bundle phishing templates or attack content, and does not start a scan,
 SET launch, capture, VM, or service by itself. SET is dual-use: the launcher is
 only a controlled front end for an operator-installed copy, and the operator is
-responsible for staying inside the authorized scope.
+responsible for staying inside the authorized scope. Captures may contain
+sensitive payloads: the panel redacts the summary, never uploads or transmits a
+capture, and cannot inject or replay packets. Keep raw captures local and handle
+them according to the written authorization.

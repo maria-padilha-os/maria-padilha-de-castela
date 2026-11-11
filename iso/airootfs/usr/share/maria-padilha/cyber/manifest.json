@@ -19,6 +19,9 @@
     "labModeLabel": "Authorized lab mode",
     "labConfirmationLabel": "I confirm this Nmap scan targets an authorized lab or private network.",
     "setConfirmationLabel": "I confirm this SET launch is limited to systems I own or am explicitly authorized in writing to test.",
+    "captureConfirmationLabel": "I confirm this capture and any opened pcap are limited to traffic, systems, and media I own or am explicitly authorized in writing to examine.",
+    "openConfirmationLabel": "I confirm this capture file is local, I am authorized to examine it, and it will not be uploaded or transmitted.",
+    "sensitivePayloadWarning": "Captures can contain credentials, tokens, cookies, private keys, and personal data. Payloads and sensitive fields are redacted from the summary, but the raw capture remains sensitive. Never upload or auto-transmit a capture.",
     "dualUseWarning": "SET is a dual-use social-engineering framework. Use it only on systems you own or are explicitly authorized in writing to test. Phishing, credential harvesting, and payload delivery are prohibited.",
     "targetScopeLabel": "Target scope (owned or explicitly authorized only)",
     "targetScopePlaceholder": "e.g. 192.0.2.0/24 or lab-vm.example",
@@ -112,7 +115,7 @@
     {
       "id": "forensics",
       "title": "Wireshark / Forensics",
-      "description": "Capture-file inspection and forensic review. No capture starts automatically.",
+      "description": "Explicit, operator-started local capture and read-only pcap inspection with tshark. No capture starts automatically, no packet is injected, and no capture is uploaded. Payloads and sensitive fields are redacted from the summary.",
       "panel": "maria-padilha.cyber.panels.forensics",
       "component": "ForensicsPanel",
       "offensive": true,
@@ -125,13 +128,27 @@
         "stop",
         "clear"
       ],
+      "policy": {
+        "admitted": true,
+        "readOnly": true,
+        "autoCapture": false,
+        "packetInjection": false,
+        "uploads": false,
+        "autoUpload": false,
+        "sensitivePayloads": "redact-and-warn",
+        "capabilities": [
+          "CAP_NET_RAW",
+          "CAP_NET_ADMIN"
+        ],
+        "reason": "The forensics tab opens local captures read-only and can start an explicit tshark capture when the host grants capture capability. It has no packet-injection or upload path."
+      },
       "tool": {
         "commands": [
-          "wireshark",
-          "tshark"
+          "tshark",
+          "wireshark"
         ],
         "required": true,
-        "installHint": "Wireshark and the forensic baseline are part of the reviewed core image. Open only captures you own or are authorized to examine."
+        "installHint": "tshark is part of the reviewed Wireshark core image. Without it, pcap parsing is unavailable and no command is run. Captures opened here must be local media you own or are authorized to examine."
       }
     },
     {

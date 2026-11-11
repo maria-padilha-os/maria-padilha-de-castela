@@ -70,7 +70,12 @@ function ToolRunner(options) {
     this.authorization = options.authorization || null;
     this.probe = typeof options.probe === "function" ? options.probe : null;
     this.execute = typeof options.execute === "function" ? options.execute : null;
+    this.stopExecute = typeof options.stop === "function"
+        ? options.stop
+        : (typeof options.stopExecutor === "function" ? options.stopExecutor : null);
     this.invocations = [];
+    this.activeInvocation = null;
+    this.activeResult = null;
     this.lastResult = null;
 }
 
@@ -295,6 +300,8 @@ ToolRunner.prototype.start = function (tabId, options) {
     }
 
     this.invocations.push(invocation);
+    this.activeInvocation = invocation;
+    this.activeResult = execution;
     return this._finish({
         status: "started",
         executed: true,
@@ -307,6 +314,39 @@ ToolRunner.prototype.start = function (tabId, options) {
 
 ToolRunner.prototype.stop = function () {
     var result = null;
+    var invocation = this.activeInvocation;
+    var execution = this.activeResult;
+    var stopResult = null;
+
+    /*
+     * The optional host stop function is the only place a running process can
+     * be asked to stop. It is called only from this explicit stop path, never
+     * on a timer or visibility change. The frontend still does not spawn or
+     * signal a process itself.
+     */
+    if (this.stopExecute && invocation) {
+        try {
+            stopResult = this.stopExecute({
+                tabId: invocation.tabId,
+                command: invocation.command,
+                pid: execution && typeof execution.pid !== "undefined"
+                    ? execution.pid
+                    : null,
+                signal: "SIGINT",
+                graceful: true,
+                startedAt: invocation.startedAt,
+                stoppedAt: Date.now()
+            });
+        } catch (error) {
+            stopResult = {
+                status: "failed",
+                message: error && error.message ? error.message : String(error)
+            };
+        }
+    }
+    this.activeInvocation = null;
+    this.activeResult = null;
+
     if (this.authorization && typeof this.authorization.stop === "function") {
         result = this.authorization.stop();
     }
@@ -314,6 +354,8 @@ ToolRunner.prototype.stop = function () {
         status: "stopped",
         executed: false,
         reason: "stop requested",
+        signal: "SIGINT",
+        stop: stopResult,
         authorization: result ? result.state : this._authorizationSnapshot()
     });
 };

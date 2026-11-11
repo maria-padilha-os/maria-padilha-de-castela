@@ -24,6 +24,17 @@
         set: {
             confirmed: false,
             resultText: ""
+        },
+        forensics: {
+            interface: "",
+            filter: "none",
+            capturePath: "",
+            captureConfirmed: false,
+            captureActive: false,
+            captureResultText: "",
+            openPath: "",
+            openConfirmed: false,
+            openResultText: ""
         }
     };
 
@@ -55,7 +66,11 @@
         var host = window.MariaPadilhaCyberHost || {};
         return {
             probe: typeof host.probe === "function" ? host.probe : null,
-            execute: typeof host.execute === "function" ? host.execute : null
+            execute: typeof host.execute === "function" ? host.execute : null,
+            stop: typeof host.stop === "function" ? host.stop : null,
+            interfaces: typeof host.interfaces === "function"
+                ? host.interfaces()
+                : (Array.isArray(host.interfaces) ? host.interfaces : [])
         };
     }
 
@@ -322,6 +337,294 @@
         panel.appendChild(status);
     }
 
+    function forensicsModule() {
+        return window.CyberForensics || null;
+    }
+
+    function forensicsCaptureRequest() {
+        var Forensics = forensicsModule();
+        if (!Forensics) {
+            return {ok: false, reason: "the forensics helper module is not loaded"};
+        }
+        return Forensics.prepareCapture({
+            confirmed: state.forensics.captureConfirmed,
+            authorizedLab: state.forensics.captureConfirmed,
+            authorization: state.surface.authorization.snapshot(),
+            interface: state.forensics.interface,
+            outputPath: state.forensics.capturePath,
+            filter: state.forensics.filter
+        });
+    }
+
+    function forensicsOpenRequest() {
+        var Forensics = forensicsModule();
+        if (!Forensics) {
+            return {ok: false, reason: "the forensics helper module is not loaded"};
+        }
+        return Forensics.prepareOpen({
+            confirmed: state.forensics.openConfirmed,
+            authorizedLab: state.forensics.openConfirmed,
+            authorization: state.surface.authorization.snapshot(),
+            capturePath: state.forensics.openPath
+        });
+    }
+
+    function renderForensicsPanel(panel, tab, prepared) {
+        var Forensics = forensicsModule();
+        if (!Forensics) {
+            panel.appendChild(fallbackBox({
+                title: "Forensics helper unavailable",
+                message: "The forensics capture/parser module was not loaded, so no capture or open control is offered.",
+                reason: "src/forensics.js is missing",
+                installHint: "Restore the reviewed frontend file and reload the surface."
+            }));
+            return;
+        }
+
+        var fs = state.forensics;
+        var authSnapshot = state.surface.authorization.snapshot();
+        var captureValidation = el("p", "mp-cyber-error", "");
+        var captureStatus = el("pre", "mp-cyber-status", fs.captureResultText);
+        var openValidation = el("p", "mp-cyber-error", "");
+        var openStatus = el("pre", "mp-cyber-status", fs.openResultText);
+
+        panel.appendChild(el("p", "mp-cyber-error",
+            authSnapshot.sensitivePayloadWarning ||
+            "Captures can contain credentials, tokens, cookies, private keys, and personal data. Payloads are redacted from the summary, but the raw capture remains sensitive. Never upload or auto-transmit a capture."));
+        panel.appendChild(el("p", "mp-cyber-panel-copy",
+            "Live capture needs CAP_NET_RAW/CAP_NET_ADMIN on the capture helper, or a distribution capture group. This panel never uses root by default and never grants capabilities. Opening a local pcap needs no special capability."));
+
+        panel.appendChild(el("h2", "mp-cyber-panel-title", "Live capture (explicit)"));
+
+        var interfaceBox = el("div", "mp-cyber-field");
+        var interfaceInput = el("input", "mp-cyber-input");
+        interfaceInput.type = "text";
+        interfaceInput.value = fs.interface;
+        interfaceInput.placeholder = "explicit interface (e.g. lo or eth0)";
+        interfaceInput.setAttribute("list", "mp-forensics-interfaces");
+        var interfaceList = el("datalist");
+        interfaceList.id = "mp-forensics-interfaces";
+        var interfaces = Forensics.normalizeInterfaces(
+            state.surface.interfaces || []
+        ).interfaces;
+        interfaces.forEach(function (entry) {
+            var option = el("option");
+            option.value = entry.name;
+            option.label = entry.description || entry.name;
+            interfaceList.appendChild(option);
+        });
+        interfaceBox.appendChild(interfaceInput);
+        interfaceBox.appendChild(interfaceList);
+        panel.appendChild(fieldBox("Interface", interfaceBox));
+
+        var capturePathInput = el("input", "mp-cyber-input");
+        capturePathInput.type = "text";
+        capturePathInput.value = fs.capturePath;
+        capturePathInput.placeholder = "/home/operator/captures/lab.pcapng";
+        capturePathInput.addEventListener("input", function () {
+            fs.capturePath = capturePathInput.value;
+            refreshCapture();
+        });
+        panel.appendChild(fieldBox("New local capture path", capturePathInput));
+
+        var filterSelect = el("select", "mp-cyber-input");
+        Forensics.listCaptureFilters().forEach(function (filter) {
+            var option = el("option", "", filter.label);
+            option.value = filter.id;
+            option.selected = filter.id === fs.filter;
+            filterSelect.appendChild(option);
+        });
+        filterSelect.addEventListener("change", function () {
+            fs.filter = filterSelect.value;
+            refreshCapture();
+        });
+        panel.appendChild(fieldBox("Capture filter (allowlisted)", filterSelect));
+
+        var captureConfirmLabel = el("label", "mp-cyber-checkbox");
+        var captureConfirm = el("input");
+        captureConfirm.type = "checkbox";
+        captureConfirm.id = "mp-forensics-capture-confirmed";
+        captureConfirm.checked = fs.captureConfirmed;
+        captureConfirm.addEventListener("change", function () {
+            fs.captureConfirmed = captureConfirm.checked;
+            refreshCapture();
+        });
+        captureConfirmLabel.appendChild(captureConfirm);
+        captureConfirmLabel.appendChild(document.createTextNode(
+            authSnapshot.captureConfirmationLabel ||
+            "I confirm this capture is limited to traffic, systems, and media I own or am explicitly authorized in writing to examine."));
+        panel.appendChild(captureConfirmLabel);
+
+        panel.appendChild(captureValidation);
+
+        var captureActions = el("div", "mp-cyber-actions");
+        var startCapture = el("button", "mp-cyber-button mp-cyber-button--accent",
+            "Start capture (explicit)");
+        startCapture.type = "button";
+        startCapture.addEventListener("click", function () {
+            var request = forensicsCaptureRequest();
+            if (!request.ok) {
+                refreshCapture();
+                return;
+            }
+            var result = state.surface.runner.start("forensics", {
+                confirmed: true,
+                args: request.args,
+                metadata: {
+                    action: "capture-start",
+                    interface: request.interface,
+                    outputPath: request.outputPath,
+                    captureFilter: request.captureFilter,
+                    stopSignal: request.stopSignal,
+                    readOnly: false,
+                    uploads: false,
+                    packetInjection: false
+                }
+            });
+            if (result.status !== "started") {
+                state.lastStatus = result.status +
+                    (result.reason ? ": " + result.reason : "");
+                render();
+                return;
+            }
+            fs.captureActive = true;
+            fs.captureResultText = "Capture started on " + request.interface +
+                " by explicit operator action. Use Stop capture when finished; nothing is uploaded.";
+            state.lastStatus = "Capture started.";
+            render();
+        });
+        captureActions.appendChild(startCapture);
+
+        var stopCapture = el("button", "mp-cyber-button mp-cyber-button--danger",
+            "Stop capture");
+        stopCapture.type = "button";
+        stopCapture.addEventListener("click", function () {
+            var result = state.surface.runner.stop();
+            fs.captureActive = false;
+            fs.captureResultText = result.reason +
+                (result.stop && result.stop.message ? ": " + result.stop.message : "") +
+                ". The host executor sends SIGINT; no capture data is uploaded.";
+            state.lastStatus = "Capture stop requested.";
+            render();
+        });
+        captureActions.appendChild(stopCapture);
+        panel.appendChild(captureActions);
+        panel.appendChild(captureStatus);
+
+        panel.appendChild(el("h2", "mp-cyber-panel-title", "Inspect an existing capture (read-only)"));
+        var openPathInput = el("input", "mp-cyber-input");
+        openPathInput.type = "text";
+        openPathInput.value = fs.openPath;
+        openPathInput.placeholder = "/home/operator/captures/lab.pcap";
+        openPathInput.addEventListener("input", function () {
+            fs.openPath = openPathInput.value;
+            refreshOpen();
+        });
+        panel.appendChild(fieldBox("Local pcap/pcapng path", openPathInput));
+
+        var openConfirmLabel = el("label", "mp-cyber-checkbox");
+        var openConfirm = el("input");
+        openConfirm.type = "checkbox";
+        openConfirm.id = "mp-forensics-open-confirmed";
+        openConfirm.checked = fs.openConfirmed;
+        openConfirm.addEventListener("change", function () {
+            fs.openConfirmed = openConfirm.checked;
+            refreshOpen();
+        });
+        openConfirmLabel.appendChild(openConfirm);
+        openConfirmLabel.appendChild(document.createTextNode(
+            authSnapshot.openConfirmationLabel ||
+            "I confirm this capture file is local, I am authorized to examine it, and it will not be uploaded or transmitted."));
+        panel.appendChild(openConfirmLabel);
+
+        panel.appendChild(openValidation);
+
+        var openButton = el("button", "mp-cyber-button mp-cyber-button--accent",
+            "Open and parse pcap (explicit)");
+        openButton.type = "button";
+        openButton.addEventListener("click", function () {
+            var plan = forensicsOpenRequest();
+            if (!plan.ok) {
+                refreshOpen();
+                return;
+            }
+            var result = state.surface.runner.start("forensics", {
+                confirmed: true,
+                args: plan.args,
+                metadata: {
+                    action: "pcap-open",
+                    capturePath: plan.capturePath,
+                    readOnly: true,
+                    uploads: false,
+                    packetInjection: false
+                }
+            });
+            if (result.status !== "started") {
+                state.lastStatus = result.status +
+                    (result.reason ? ": " + result.reason : "");
+                render();
+                return;
+            }
+            finishOpen(result.result, plan.capturePath);
+        });
+        panel.appendChild(openButton);
+        panel.appendChild(openStatus);
+
+        panel.appendChild(el("pre", "mp-cyber-status", state.lastStatus ||
+            (prepared.status === "ready"
+                ? "Ready. Select an interface and a new capture path, or open a local pcap. Nothing starts until the explicit button and confirmation."
+                : prepared.reason)));
+
+        interfaceInput.addEventListener("input", function () {
+            fs.interface = interfaceInput.value;
+            refreshCapture();
+        });
+        refreshCapture();
+        refreshOpen();
+
+        function refreshCapture() {
+            var request = forensicsCaptureRequest();
+            captureValidation.textContent = request.ok ? "" : request.reason;
+            captureValidation.hidden = request.ok;
+            startCapture.disabled = prepared.status !== "ready" ||
+                !request.ok || fs.captureActive;
+            stopCapture.disabled = !fs.captureActive;
+        }
+
+        function refreshOpen() {
+            var request = forensicsOpenRequest();
+            openValidation.textContent = request.ok ? "" : request.reason;
+            openValidation.hidden = request.ok;
+            openButton.disabled = prepared.status !== "ready" || !request.ok;
+        }
+
+        function finishOpen(execution, capturePath) {
+            if (execution && typeof execution.then === "function") {
+                openStatus.textContent = "Reading the local capture; no upload is performed.";
+                execution.then(function (value) {
+                    finishOpen(value, capturePath);
+                }, function (error) {
+                    var failed = Forensics.interpretCaptureResult({
+                        status: "failed",
+                        message: error && error.message ? error.message : String(error)
+                    }, {capturePath: capturePath});
+                    fs.openResultText = Forensics.formatCaptureSummary(failed);
+                    state.lastStatus = "Capture read failed.";
+                    render();
+                });
+                return;
+            }
+            var parsed = Forensics.interpretCaptureResult(execution, {
+                capturePath: capturePath
+            });
+            fs.openResultText = Forensics.formatCaptureSummary(parsed);
+            state.lastStatus = parsed.ok
+                ? "Capture parsed locally. Sensitive payloads are redacted; nothing was uploaded."
+                : "Capture read failed.";
+            render();
+        }
+    }
+
     function renderNmapPanel(panel, tab, prepared) {
         var Nmap = nmapModule();
         if (!Nmap) {
@@ -523,6 +826,12 @@
             return;
         }
 
+        if (tab.id === "forensics") {
+            renderForensicsPanel(panel, tab, prepared);
+            container.appendChild(panel);
+            return;
+        }
+
         if (prepared.status === "missing-tool") {
             panel.appendChild(fallbackBox(prepared.fallback));
             container.appendChild(panel);
@@ -642,13 +951,15 @@
                 manifest: manifest,
                 registry: registry,
                 authorization: new window.CyberAuthorization.AuthorizationState(manifest.authorization),
-                runner: null
+                runner: null,
+                interfaces: adapter.interfaces
             };
             state.surface.runner = new window.CyberRunner.ToolRunner({
                 registry: registry,
                 authorization: state.surface.authorization,
                 probe: adapter.probe,
-                execute: adapter.execute
+                execute: adapter.execute,
+                stop: adapter.stop
             });
             state.activeTabId = (registry.list()[0] || {}).id || "";
             render();

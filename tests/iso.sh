@@ -57,11 +57,14 @@ for file in \
     iso/airootfs/usr/share/maria-padilha/cyber/src/authorization.js \
     iso/airootfs/usr/share/maria-padilha/cyber/src/runner.js \
     iso/airootfs/usr/share/maria-padilha/cyber/src/set.js \
+    iso/airootfs/usr/share/maria-padilha/cyber/src/forensics.js \
     iso/airootfs/usr/share/maria-padilha/cyber/src/theme.css \
     iso/airootfs/usr/share/maria-padilha/cyber/qml/CyberShell.qml \
     iso/airootfs/usr/share/maria-padilha/cyber/qml/ToolPanelFrame.qml \
     iso/airootfs/usr/share/maria-padilha/cyber/qml/SetPanel.qml \
+    iso/airootfs/usr/share/maria-padilha/cyber/qml/ForensicsPanel.qml \
     docs/policy/security-tool-groups.md \
+    docs/policy/forensics-capabilities.md \
     tests/security-groups.sh \
     tests/cyber-frontend.sh; do
     require_file "$file"

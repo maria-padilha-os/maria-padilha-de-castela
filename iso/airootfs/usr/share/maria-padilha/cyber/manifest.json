@@ -23,6 +23,10 @@
     "openConfirmationLabel": "I confirm this capture file is local, I am authorized to examine it, and it will not be uploaded or transmitted.",
     "sensitivePayloadWarning": "Captures can contain credentials, tokens, cookies, private keys, and personal data. Payloads and sensitive fields are redacted from the summary, but the raw capture remains sensitive. Never upload or auto-transmit a capture.",
     "dualUseWarning": "SET is a dual-use social-engineering framework. Use it only on systems you own or are explicitly authorized in writing to test. Phishing, credential harvesting, and payload delivery are prohibited.",
+    "labVmWarning": "LAB ONLY: the default VM network is isolated, has no host bridge, and cannot route to the host LAN. Keep target traffic inside this network unless you deliberately choose the warned host-LAN option.",
+    "hostLanWarning": "WARNING: Attaching this VM to the host LAN removes lab isolation. The guest can reach real hosts, services, and the internet. Do this only on a network you own or are explicitly authorized to use, and take a clean snapshot before changing the VM network.",
+    "hostLanConfirmationLabel": "I understand this VM will leave the isolated LAB ONLY network, can reach the host LAN, and that I have authorization and a clean snapshot.",
+    "snapshotGuidance": "Before any target runs, create a clean baseline snapshot of the powered-off qcow2 VM. Revert to it after each exercise, and take a fresh snapshot before changing the network or installing untrusted media. Never store credentials, captured secrets, or production data in a snapshot.",
     "targetScopeLabel": "Target scope (owned or explicitly authorized only)",
     "targetScopePlaceholder": "e.g. 192.0.2.0/24 or lab-vm.example",
     "stopLabel": "Stop",
@@ -154,7 +158,7 @@
     {
       "id": "lab-vm",
       "title": "Lab / VM",
-      "description": "Isolated VM launcher for authorized lab work. No VM, bridge, or service starts by itself.",
+      "description": "Isolated QEMU/libvirt lab launcher. It generates a domain on the default LAB ONLY network, includes snapshot guidance, and warns before any host-LAN attachment. No VM, bridge, network, or service starts by itself.",
       "panel": "maria-padilha.cyber.panels.lab-vm",
       "component": "LabPanel",
       "offensive": true,
@@ -167,13 +171,37 @@
         "stop",
         "clear"
       ],
+      "policy": {
+        "admitted": true,
+        "isolatedNetworkDefault": true,
+        "defaultNetwork": "mp-lab-isolated",
+        "hostBridgeDefault": false,
+        "hostLanAttachment": "explicit-warning-and-confirmation",
+        "snapshotsRequired": true,
+        "autoStart": false,
+        "reason": "The lab launcher defaults to an isolated libvirt network with no host bridge. Host-LAN attachment is an explicit, warned, non-default path that also requires an operator-supplied existing bridge."
+      },
+      "launch": {
+        "args": [],
+        "allowArguments": false,
+        "allowTarget": false,
+        "allowTemplates": false,
+        "allowPayloads": false
+      },
+      "lab": {
+        "defaultNetwork": "mp-lab-isolated",
+        "isolatedForwardMode": "none",
+        "hostBridgeDefault": false,
+        "hostLanRequiresConfirmation": true,
+        "snapshotRequired": true
+      },
       "tool": {
         "commands": [
           "qemu-system-x86_64",
           "virsh"
         ],
         "required": true,
-        "installHint": "The isolated QEMU/libvirt lab baseline is part of the reviewed core image. Keep lab traffic inside a network you own and control."
+        "installHint": "The isolated QEMU/libvirt lab baseline is part of the reviewed core image. Use the generated LAB ONLY network by default and keep lab traffic inside a network you own and control."
       }
     }
   ]

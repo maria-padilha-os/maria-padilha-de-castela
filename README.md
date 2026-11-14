@@ -27,6 +27,7 @@ Read next:
 - [Authorized-use boundary](docs/policy/authorized-use.md)
 - [Authorized security tool groups](docs/policy/security-tool-groups.md)
 - [Wireshark/forensics capabilities and revocation](docs/policy/forensics-capabilities.md)
+- [Isolated lab/VM network and snapshot policy](docs/policy/lab-vm-isolation.md)
 - [Legal, licensing, and export considerations](docs/policy/legal-licensing-export.md)
 - [Reference build](build/README.md)
 
@@ -138,11 +139,27 @@ and [the capability/revocation document](docs/policy/forensics-capabilities.md).
 The tests use a generated pcap fixture with synthetic sensitive content and
 never perform a live capture.
 
+The Lab / VM tab is an explicit QEMU/libvirt definition panel. By default it
+generates a domain on `mp-lab-isolated`, a **LAB ONLY** network with
+`<forward mode='none'/>`, no host bridge, and no LAN route. The panel requires a
+qcow2 disk and shows snapshot guidance: take a clean baseline before any target
+runs, revert after each exercise, and take a new snapshot before changing the
+network or media. Selecting **HOST LAN** shows a prominent warning, requires a
+separate acknowledgement and an operator-supplied existing bridge name, and is
+never the default. Nothing is defined, started, or auto-run by the panel; the
+host adapter receives the generated XML only after an explicit click. The tests
+validate the generated domain XML and network isolation without starting a VM or
+touching the host network. See
+[`frontend/cyber/src/lab.js`](frontend/cyber/src/lab.js),
+[`frontend/cyber/test/lab.test.cjs`](frontend/cyber/test/lab.test.cjs), and
+[the lab isolation policy](docs/policy/lab-vm-isolation.md).
+
 See [`frontend/cyber/README.md`](frontend/cyber/README.md) for the manifest,
 feature-flag, QML/browser integration, and tests. `tests/cyber-frontend.sh`
 checks the manifest, tab enable/disable, missing-tool fallback, authorization
 state, image mirror, no-auto-run rule, the SET no-default-action rule, the
-forensics read-only/no-injection/no-upload rules, and the no-palette rule.
+forensics read-only/no-injection/no-upload rules, the lab isolated-network and
+host-LAN warning rules, and the no-palette rule.
 
 ## Build
 

@@ -252,6 +252,30 @@ revocation steps (`setcap -r`, removing the capture group, re-checking
 The machine-readable summary is `Forensics.capabilityReport()` in
 [`src/forensics.js`](src/forensics.js).
 
+## Lab / VM extension
+
+The lab tab is a QEMU/libvirt definition generator, not a boot button. It
+validates a VM name, a local qcow2 disk path, memory/vCPU counts, and a network
+selection, then renders libvirt domain XML. [`src/lab.js`](src/lab.js) never
+connects to libvirt, calls `virsh`, spawns QEMU, writes a disk, or changes a
+network; the host adapter receives the XML through the runner's explicit
+`metadata` only after the operator clicks Define.
+
+The default network is `mp-lab-isolated`, labelled **LAB ONLY**. Its generated
+definition uses `<forward mode='none'/>`, has no host bridge, and gives the
+domain `<interface type='network'>` with `<source network='mp-lab-isolated'/>`.
+The host-LAN path is a separate `host-lan` profile labelled **HOST LAN (NOT
+ISOLATED)**. Selecting it displays a warning, requires a separate acknowledgement,
+and requires an operator-supplied existing bridge name; there is no default
+bridge. Unconfirmed host-LAN plans fail closed and no domain XML is returned.
+
+A qcow2 disk is required so snapshots are available. The panel displays the
+snapshot guidance from the manifest and `src/lab.js`: create a clean baseline
+while powered off, revert after every exercise, and take a new snapshot before
+changing the network or installing untrusted media. The isolated network, the
+host-LAN warning, the snapshot flow, and the host adapter contract are documented
+in [`docs/policy/lab-vm-isolation.md`](../../docs/policy/lab-vm-isolation.md).
+
 ## Missing tools and no auto-run
 
 The runner probes tool availability through a host-supplied function. A missing
@@ -305,7 +329,12 @@ gates. The forensics tests use a **generated pcap fixture**
 capture/open/stop argv, interface/path/filter validation, confirmation and
 authorization gates, refusal of upload/injection fields, payload and credential
 redaction, and malformed/timeout/error handling. They never run tshark, open a
-live interface, capture traffic, or contact an external host.
+live interface, capture traffic, or contact an external host. The lab tests
+validate generated domain XML and the `mp-lab-isolated` network definition,
+confirm that the default has no host forwarding or host bridge, exercise the
+host-LAN warning/confirmation/bridge requirements, validate VM/disk/network
+input, and check the snapshot guidance. They never define a libvirt network,
+start a VM, or touch the host network in CI.
 
 ## Boundary
 

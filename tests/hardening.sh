@@ -148,19 +148,20 @@ mapfile -t enabled_units < <(
     find "$unit_dir" -type l -path '*.wants/*' -printf '%P\n' | LC_ALL=C sort
 )
 expected_units=(
+    "getty.target.wants/serial-getty@ttyS0.service"
     "graphical.target.wants/greetd.service"
     "multi-user.target.wants/NetworkManager.service"
     "multi-user.target.wants/nftables.service"
 )
 if [[ "${enabled_units[*]}" == "${expected_units[*]}" ]]; then
-    ok "enabled units are exactly greetd, NetworkManager, and nftables"
+    ok "enabled units are exactly serial getty, greetd, NetworkManager, and nftables"
 else
     bad "unexpected enabled units: ${enabled_units[*]}"
 fi
 
 for unit in "${enabled_units[@]}"; do
     case "$unit" in
-        *NetworkManager.service|*greetd.service|*nftables.service) ;;
+        *NetworkManager.service|*greetd.service|*nftables.service|*serial-getty@ttyS0.service) ;;
         *) bad "unexpected enabled unit: $unit" ;;
     esac
 done

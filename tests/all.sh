@@ -41,6 +41,7 @@ for f in \
   build/archiso/profile/airootfs/etc/calamares/modules/packages.conf \
   docs/policy/security-tool-groups.md \
   docs/policy/forensics-capabilities.md \
+  docs/policy/lab-vm-isolation.md \
   tests/security-groups.sh \
   tests/cyber-frontend.sh \
   frontend/cyber/manifest.json \
@@ -50,14 +51,17 @@ for f in \
   frontend/cyber/src/nmap.js \
   frontend/cyber/src/set.js \
   frontend/cyber/src/forensics.js \
+  frontend/cyber/src/lab.js \
   frontend/cyber/qml/CyberShell.qml \
   frontend/cyber/qml/ToolPanelFrame.qml \
   frontend/cyber/qml/NmapPanel.qml \
   frontend/cyber/qml/SetPanel.qml \
   frontend/cyber/qml/ForensicsPanel.qml \
+  frontend/cyber/qml/LabPanel.qml \
   frontend/cyber/test/nmap.test.cjs \
   frontend/cyber/test/set.test.cjs \
   frontend/cyber/test/forensics.test.cjs \
+  frontend/cyber/test/lab.test.cjs \
   frontend/cyber/test/fixtures/nmap-basic.xml \
   frontend/cyber/test/fixtures/nmap-error.xml \
   frontend/cyber/test/fixtures/nmap-timeout.xml \
@@ -112,6 +116,24 @@ for term in \
   'tshark'
 do
   require_text "$forensics" "$term"
+done
+
+# Isolated lab/VM network, host-LAN warning, and snapshot boundary
+lab_doc=docs/policy/lab-vm-isolation.md
+for term in \
+  'mp-lab-isolated' \
+  "forward mode='none'" \
+  'no host bridge' \
+  'LAB ONLY' \
+  'HOST LAN' \
+  'warning' \
+  'snapshot' \
+  'revert' \
+  'qcow2' \
+  'does not start' \
+  'CI'
+do
+  require_text "$lab_doc" "$term"
 done
 
 # Legal, licensing, and export review

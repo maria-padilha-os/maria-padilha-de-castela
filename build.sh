@@ -150,12 +150,14 @@ verify_profile() {
         airootfs/usr/share/maria-padilha/cyber/src/nmap.js \
         airootfs/usr/share/maria-padilha/cyber/src/set.js \
         airootfs/usr/share/maria-padilha/cyber/src/forensics.js \
+        airootfs/usr/share/maria-padilha/cyber/src/lab.js \
         airootfs/usr/share/maria-padilha/cyber/src/theme.css \
         airootfs/usr/share/maria-padilha/cyber/qml/CyberShell.qml \
         airootfs/usr/share/maria-padilha/cyber/qml/ToolPanelFrame.qml \
         airootfs/usr/share/maria-padilha/cyber/qml/NmapPanel.qml \
         airootfs/usr/share/maria-padilha/cyber/qml/SetPanel.qml \
         airootfs/usr/share/maria-padilha/cyber/qml/ForensicsPanel.qml \
+        airootfs/usr/share/maria-padilha/cyber/qml/LabPanel.qml \
         efiboot/loader/loader.conf \
         efiboot/loader/entries/01-maria-padilha-de-castela-linux.conf \
         syslinux/syslinux.cfg
@@ -173,6 +175,12 @@ verify_profile() {
     if grep -qF -- '"autoRun": true' "$cyber_manifest"; then
         die "cyber frontend manifest contains an auto-run tab"
     fi
+    grep -qF -- '"hostBridgeDefault": false' "$cyber_manifest" ||
+        die "cyber lab manifest does not disable host bridges by default"
+    grep -qF -- '"isolatedNetworkDefault": true' "$cyber_manifest" ||
+        die "cyber lab manifest does not default to the isolated network"
+    grep -qF -- '"hostLanAttachment": "explicit-warning-and-confirmation"' "$cyber_manifest" ||
+        die "cyber lab manifest is missing the host-LAN warning gate"
 
     if ! grep -qE '^[[:space:]]*SigLevel[[:space:]]*=[[:space:]]*Required' "$profile_src/pacman.conf"; then
         die "iso/pacman.conf does not require repository signatures"

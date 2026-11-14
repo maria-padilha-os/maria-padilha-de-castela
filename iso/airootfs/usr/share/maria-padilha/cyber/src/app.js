@@ -25,6 +25,14 @@
             confirmed: false,
             resultText: ""
         },
+        lab: {
+            vmName: "",
+            diskPath: "",
+            networkId: "isolated",
+            hostLanConfirmed: false,
+            hostBridge: "",
+            resultText: ""
+        },
         forensics: {
             interface: "",
             filter: "none",
@@ -799,6 +807,190 @@
         refreshNmapState();
     }
 
+    function labModule() {
+        return window.CyberLab || null;
+    }
+
+    function labPlan() {
+        var Lab = labModule();
+        if (!Lab) {
+            return {
+                ok: false,
+                status: "missing-module",
+                reason: "the lab helper module is not loaded"
+            };
+        }
+        var name = state.lab.vmName || Lab.DEFAULT_VM_NAME;
+        return Lab.prepareLaunch({
+            vmName: name,
+            diskPath: state.lab.diskPath || Lab.defaultDiskPath(name),
+            network: state.lab.networkId,
+            hostLanConfirmed: state.lab.hostLanConfirmed,
+            hostBridge: state.lab.hostBridge
+        });
+    }
+
+    function renderLabPanel(panel, tab, prepared) {
+        var Lab = labModule();
+        if (!Lab) {
+            panel.appendChild(fallbackBox({
+                title: "Lab helper unavailable",
+                message: "The lab launcher module was not loaded, so no definition or launch control is offered.",
+                reason: "src/lab.js is missing",
+                installHint: "Restore the reviewed frontend file and reload the surface."
+            }));
+            return;
+        }
+
+        var auth = state.surface.authorization.snapshot();
+        var plan = labPlan();
+        var hostLan = state.lab.networkId === Lab.HOST_LAN_NETWORK_ID;
+
+        panel.appendChild(el("p", "mp-cyber-panel-copy",
+            auth.labVmWarning || Lab.LAB_NETWORK_LABEL));
+
+        var nameInput = el("input", "mp-cyber-input");
+        nameInput.type = "text";
+        nameInput.value = state.lab.vmName || Lab.DEFAULT_VM_NAME;
+        nameInput.placeholder = Lab.DEFAULT_VM_NAME;
+        nameInput.addEventListener("change", function () {
+            state.lab.vmName = nameInput.value;
+            render();
+        });
+        panel.appendChild(fieldBox("VM name", nameInput));
+
+        var diskInput = el("input", "mp-cyber-input");
+        diskInput.type = "text";
+        diskInput.value = state.lab.diskPath ||
+            Lab.defaultDiskPath(state.lab.vmName || Lab.DEFAULT_VM_NAME);
+        diskInput.placeholder = Lab.DEFAULT_DISK_PATH;
+        diskInput.addEventListener("change", function () {
+            state.lab.diskPath = diskInput.value;
+            render();
+        });
+        panel.appendChild(fieldBox("qcow2 disk path", diskInput));
+
+        var networkSelect = el("select", "mp-cyber-input");
+        Lab.listNetworks().forEach(function (network) {
+            var option = el("option", "", network.label);
+            option.value = network.id;
+            option.selected = network.id === state.lab.networkId;
+            networkSelect.appendChild(option);
+        });
+        networkSelect.addEventListener("change", function () {
+            state.lab.networkId = networkSelect.value;
+            if (state.lab.networkId !== Lab.HOST_LAN_NETWORK_ID) {
+                state.lab.hostLanConfirmed = false;
+            }
+            render();
+        });
+        panel.appendChild(fieldBox("Network (LAB ONLY is the default)", networkSelect));
+
+        var warning = el("p", "mp-cyber-error",
+            auth.hostLanWarning || Lab.HOST_LAN_WARNING);
+        warning.hidden = !hostLan;
+        panel.appendChild(warning);
+
+        var hostLanLabel = el("label", "mp-cyber-checkbox");
+        hostLanLabel.hidden = !hostLan;
+        var hostLanConfirm = el("input");
+        hostLanConfirm.type = "checkbox";
+        hostLanConfirm.checked = state.lab.hostLanConfirmed;
+        hostLanConfirm.addEventListener("change", function () {
+            state.lab.hostLanConfirmed = hostLanConfirm.checked;
+            render();
+        });
+        hostLanLabel.appendChild(hostLanConfirm);
+        hostLanLabel.appendChild(document.createTextNode(
+            auth.hostLanConfirmationLabel ||
+                "I understand this VM will leave the isolated LAB ONLY network, can reach the host LAN, and that I have authorization and a clean snapshot."));
+        panel.appendChild(hostLanLabel);
+
+        var bridgeInput = el("input", "mp-cyber-input");
+        bridgeInput.type = "text";
+        bridgeInput.value = state.lab.hostBridge;
+        bridgeInput.placeholder = "existing host bridge name (no default; e.g. br0)";
+        bridgeInput.addEventListener("change", function () {
+            state.lab.hostBridge = bridgeInput.value;
+            render();
+        });
+        var bridgeField = fieldBox("Existing host bridge (required only for host LAN)", bridgeInput);
+        bridgeField.hidden = !hostLan;
+        panel.appendChild(bridgeField);
+
+        panel.appendChild(el("p", "mp-cyber-panel-copy",
+            "Snapshot guidance: " + (auth.snapshotGuidance || Lab.SNAPSHOT_GUIDANCE[0])));
+
+        if (prepared.status === "missing-tool") {
+            panel.appendChild(fallbackBox(prepared.fallback));
+            containerStatus(panel, prepared.reason);
+            return;
+        }
+
+        var validation = el("p", "mp-cyber-error", plan.ok ? "" : plan.reason);
+        validation.hidden = plan.ok;
+        panel.appendChild(validation);
+
+        var run = el("button", "mp-cyber-button mp-cyber-button--accent",
+            hostLan
+                ? "Define VM on host LAN (explicit, NOT ISOLATED)"
+                : "Define isolated lab VM (explicit)");
+        run.type = "button";
+        run.id = "mp-lab-define";
+        run.disabled = prepared.status !== "ready" || !plan.ok;
+        run.addEventListener("click", function () {
+            var current = labPlan();
+            if (!current.ok) {
+                state.lastStatus = current.reason;
+                render();
+                return;
+            }
+            var result = state.surface.runner.start("lab-vm", {
+                confirmed: true,
+                args: [],
+                metadata: {
+                    action: current.action,
+                    domainName: current.domainName,
+                    domainXml: current.domainXml,
+                    networkXml: current.networkXml,
+                    network: current.network,
+                    isolated: current.isolated,
+                    hostBridge: current.hostBridge,
+                    hostLanWarning: current.hostLanWarning,
+                    snapshotGuidance: current.snapshotGuidance,
+                    autoStart: false
+                }
+            });
+            if (result.status !== "started") {
+                state.lastStatus = result.status +
+                    (result.reason ? ": " + result.reason : "");
+                render();
+                return;
+            }
+            state.lab.resultText = current.isolated
+                ? "Definition for " + current.domainName + " prepared on " +
+                    current.networkLabel + ". No VM was started. " +
+                    current.snapshotGuidance[0]
+                : "HOST LAN definition for " + current.domainName +
+                    " prepared. This is NOT isolated. " +
+                    current.snapshotGuidance[0];
+            state.lastStatus = current.isolated
+                ? "Isolated lab definition prepared."
+                : "Host LAN definition prepared; lab isolation is off.";
+            render();
+        });
+        panel.appendChild(run);
+
+        var resultBox = el("pre", "mp-cyber-status", state.lab.resultText);
+        resultBox.id = "mp-lab-result";
+        panel.appendChild(resultBox);
+
+        containerStatus(panel, state.lastStatus ||
+            (prepared.status === "ready" && plan.ok
+                ? "Ready. Review the network and snapshot guidance, then click Define. Nothing is started."
+                : (plan.ok ? prepared.reason : plan.reason)));
+    }
+
     function renderPanel(container, tab) {
         var panel = el("section", "mp-cyber-panel");
         panel.id = "mp-cyber-panel";
@@ -828,6 +1020,12 @@
 
         if (tab.id === "forensics") {
             renderForensicsPanel(panel, tab, prepared);
+            container.appendChild(panel);
+            return;
+        }
+
+        if (tab.id === "lab-vm") {
+            renderLabPanel(panel, tab, prepared);
             container.appendChild(panel);
             return;
         }

@@ -66,6 +66,18 @@ function AuthorizationState(config) {
     this.dualUseWarning = nonEmpty(config.dualUseWarning)
         ? config.dualUseWarning
         : "SET is a dual-use social-engineering framework. Use it only on owned systems or with explicit written permission.";
+    this.labVmWarning = nonEmpty(config.labVmWarning)
+        ? config.labVmWarning
+        : "LAB ONLY: the default VM network is isolated, has no host bridge, and cannot route to the host LAN.";
+    this.hostLanWarning = nonEmpty(config.hostLanWarning)
+        ? config.hostLanWarning
+        : "WARNING: Attaching this VM to the host LAN removes lab isolation. Use only a network you own or are explicitly authorized to use, and take a clean snapshot first.";
+    this.hostLanConfirmationLabel = nonEmpty(config.hostLanConfirmationLabel)
+        ? config.hostLanConfirmationLabel
+        : "I understand this VM will leave the isolated LAB ONLY network, can reach the host LAN, and that I have authorization and a clean snapshot.";
+    this.snapshotGuidance = nonEmpty(config.snapshotGuidance)
+        ? config.snapshotGuidance
+        : "Create a clean snapshot before any target runs, revert after each exercise, and never store credentials or captured secrets in a snapshot.";
     this.targetScopeLabel = nonEmpty(config.targetScopeLabel)
         ? config.targetScopeLabel
         : "Target scope";
@@ -104,6 +116,10 @@ AuthorizationState.prototype._snapshot = function () {
         openConfirmationLabel: this.openConfirmationLabel,
         sensitivePayloadWarning: this.sensitivePayloadWarning,
         dualUseWarning: this.dualUseWarning,
+        labVmWarning: this.labVmWarning,
+        hostLanWarning: this.hostLanWarning,
+        hostLanConfirmationLabel: this.hostLanConfirmationLabel,
+        snapshotGuidance: this.snapshotGuidance,
         targetScopeLabel: this.targetScopeLabel,
         stopLabel: this.stopLabel,
         clearLabel: this.clearLabel,

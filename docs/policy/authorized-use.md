@@ -110,9 +110,15 @@ separate authorized-lab confirmation for each scan. The SET tab is a dual-use
 launcher/status panel for an operator-installed copy, not a content generator:
 it has no default target, template, or argument, refuses any caller-supplied
 target/template/payload content, and stays locked until the shared authorization
-gates plus a separate SET confirmation are satisfied. A missing tool produces a
-fallback and no command is run. No scanner, SET launch, capture, VM, or service
-starts automatically.
+gates plus a separate SET confirmation are satisfied. The Lab / VM tab defaults
+to the **LAB ONLY** `mp-lab-isolated` libvirt network, which has no host bridge
+and no LAN route, and requires a qcow2 baseline snapshot before target work.
+Attaching a VM to the host LAN is a warned, non-default exception that requires a
+separate acknowledgement and an operator-supplied existing bridge. A missing tool
+produces a fallback and no command is run. No scanner, SET launch, capture, VM,
+or service starts automatically. See
+[`lab-vm-isolation.md`](lab-vm-isolation.md) for the network, snapshot, and
+host-LAN boundary.
 
 ### Tool admission
 

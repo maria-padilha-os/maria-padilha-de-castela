@@ -31,6 +31,7 @@ for file in \
     "$src/src/nmap.js" \
     "$src/src/set.js" \
     "$src/src/forensics.js" \
+    "$src/src/lab.js" \
     "$src/src/theme.css" \
     "$src/src/cyber.css" \
     "$src/src/app.js" \
@@ -56,6 +57,7 @@ for file in \
     "$src/test/nmap.test.cjs" \
     "$src/test/set.test.cjs" \
     "$src/test/forensics.test.cjs" \
+    "$src/test/lab.test.cjs" \
     "$src/test/fixtures/nmap-basic.xml" \
     "$src/test/fixtures/nmap-error.xml" \
     "$src/test/fixtures/nmap-timeout.xml" \
@@ -80,6 +82,7 @@ mirror_files=(
     src/nmap.js
     src/set.js
     src/forensics.js
+    src/lab.js
     src/theme.css
     src/cyber.css
     src/app.js
@@ -282,6 +285,43 @@ if grep -RqF -- 'autoUpload: true' "$src/src/forensics.js" ||
     bad "forensics module enables upload or packet injection"
 else
     ok "forensics module never enables upload or packet injection"
+fi
+
+# The lab panel generates a libvirt domain on an isolated network by default,
+# labels the host-LAN path separately, and requires a warning acknowledgement
+# before that non-isolated attachment. It never starts a VM from the frontend.
+for term in \
+    'mp-lab-isolated' \
+    "forward mode='none'" \
+    'LAB ONLY' \
+    'HOST LAN' \
+    'hostLanConfirmed' \
+    'hostLanWarning' \
+    'snapshotGuidance' \
+    'buildNetworkXml' \
+    'buildDomainXml' \
+    'prepareLaunch'
+do
+    if grep -RqF -- "$term" "$src/src/lab.js" "$src/qml/LabPanel.qml" "$src/src/app.js" "$src/manifest.json"; then
+        ok "lab extension contains $term"
+    else
+        bad "lab extension is missing $term"
+    fi
+done
+if grep -qF -- '"hostBridgeDefault": false' "$src/manifest.json" &&
+    grep -qF -- '"isolatedNetworkDefault": true' "$src/manifest.json" &&
+    grep -qF -- '"hostLanAttachment": "explicit-warning-and-confirmation"' "$src/manifest.json" &&
+    grep -qF -- '"snapshotsRequired": true' "$src/manifest.json"; then
+    ok "lab manifest defaults to isolation and gates host-LAN attachment"
+else
+    bad "lab manifest does not declare the isolated default and host-LAN gate"
+fi
+if grep -qF -- 'vmNameField' "$src/qml/LabPanel.qml" &&
+    grep -qF -- 'hostBridgeField' "$src/qml/LabPanel.qml" &&
+    grep -qF -- 'renderLabPanel' "$src/src/app.js"; then
+    ok "lab panel exposes validated VM, network, and host-bridge controls"
+else
+    bad "lab panel is missing validated VM/network controls"
 fi
 
 # No palette literal in component CSS or QML. The theme file is allowed only

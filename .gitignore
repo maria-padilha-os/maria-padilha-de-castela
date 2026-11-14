@@ -6,3 +6,12 @@ out/
 *.sha256
 *.sig
 .env
+.env.*
+
+# Captured data and shell state are sensitive and must stay local.
+captures/
+*.pcapng
+*.cap
+.bash_history
+.zsh_history
+*.log

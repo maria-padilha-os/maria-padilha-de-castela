@@ -139,6 +139,19 @@ verify_profile() {
         keys/trusted-keyrings.txt \
         airootfs/etc/issue \
         airootfs/etc/motd \
+        airootfs/etc/nftables.conf \
+        airootfs/etc/NetworkManager/conf.d/10-maria-private.conf \
+        airootfs/etc/profile.d/10-maria-private.sh \
+        airootfs/etc/systemd/journald.conf.d/10-maria-private.conf \
+        airootfs/etc/systemd/coredump.conf.d/10-maria-private.conf \
+        airootfs/home/maria/.bashrc \
+        airootfs/home/maria/.bash_profile \
+        airootfs/home/maria/Captures/README.md \
+        airootfs/usr/local/bin/maria-wipe-captures \
+        airootfs/usr/local/bin/maria-clear-history \
+        airootfs/usr/share/doc/maria-padilha/data-handling.md \
+        airootfs/usr/share/doc/maria-padilha/network-hardening.md \
+        airootfs/usr/share/doc/maria-padilha/sandboxing.md \
         airootfs/etc/mkinitcpio.conf.d/archiso.conf \
         airootfs/etc/calamares/settings.conf \
         airootfs/etc/calamares/modules/packagechooser.conf \
@@ -200,6 +213,40 @@ verify_profile() {
             die "denylisted package is allowlisted: $pkg"
         fi
     done <"$profile_src/denylist.txt"
+
+    grep -qxF -- 'nftables' "$profile_src/packages.x86_64" ||
+        die "nftables is missing from the package allowlist"
+    grep -qE 'hook input[^;]*;[[:space:]]*policy drop' \
+        "$profile_src/airootfs/etc/nftables.conf" ||
+        die "nftables input policy is not default-deny"
+    if grep -qE 'hook input[^;]*;[[:space:]]*policy accept' \
+        "$profile_src/airootfs/etc/nftables.conf"; then
+        die "nftables input policy accepts by default"
+    fi
+    [[ "$(readlink "$profile_src/airootfs/etc/systemd/system/multi-user.target.wants/nftables.service" 2>/dev/null || true)" == *nftables.service ]] ||
+        die "nftables.service is not enabled at boot"
+    if [[ -e "$profile_src/airootfs/etc/systemd/system/multi-user.target.wants/bluetooth.service" ]]; then
+        die "bluetooth.service is enabled at boot"
+    fi
+    [[ "$(readlink "$profile_src/airootfs/etc/systemd/system/bluetooth.service" 2>/dev/null || true)" == "/dev/null" ]] ||
+        die "bluetooth.service is not masked"
+    [[ "$(readlink "$profile_src/airootfs/etc/systemd/system/dbus-org.bluez.service" 2>/dev/null || true)" == "/dev/null" ]] ||
+        die "the BlueZ D-Bus activation alias is not masked"
+    [[ "$(readlink "$profile_src/airootfs/etc/systemd/system/sshd.service" 2>/dev/null || true)" == "/dev/null" ]] ||
+        die "sshd.service is not masked"
+    grep -qE '^[[:space:]]*enabled[[:space:]]*=[[:space:]]*false' \
+        "$profile_src/airootfs/etc/NetworkManager/conf.d/10-maria-private.conf" ||
+        die "NetworkManager connectivity checking is not disabled"
+    grep -qE '^[[:space:]]*Storage[[:space:]]*=[[:space:]]*volatile' \
+        "$profile_src/airootfs/etc/systemd/journald.conf.d/10-maria-private.conf" ||
+        die "journald is not configured for volatile storage"
+    grep -qE '^[[:space:]]*Storage[[:space:]]*=[[:space:]]*none' \
+        "$profile_src/airootfs/etc/systemd/coredump.conf.d/10-maria-private.conf" ||
+        die "coredump storage is not disabled"
+    [[ -x "$profile_src/airootfs/usr/local/bin/maria-wipe-captures" ]] ||
+        die "capture wipe workflow is not executable"
+    [[ -x "$profile_src/airootfs/usr/local/bin/maria-clear-history" ]] ||
+        die "history clear workflow is not executable"
 }
 
 stage_desktop_package() {

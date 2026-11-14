@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Clear common shell/editor history files for the current user.
+#
+# This is an operator-run workflow, never a boot action. It is dry-run by
+# default, never uses sudo, and cannot change the in-memory history of another
+# running shell. After it runs, run `history -c` in every open shell or close
+# those shells.
+set -Eeuo pipefail
+
+script_name="${0##*/}"
+confirm=0
+
+usage() {
+    cat <<EOF
+usage: $script_name [--yes]
+
+Without --yes, list the history/state files that exist and would be shredded.
+--yes is required before anything is removed.
+
+Files considered (only if they exist and are regular, non-symlink files):
+  \$HISTFILE, ~/.bash_history, ~/.zsh_history, ~/.python_history,
+  ~/.local/state/bash/history, ~/.lesshst, ~/.viminfo, ~/.wget-hsts,
+  ~/.mysql_history, ~/.psql_history, ~/.sqlite_history, ~/.node_repl_history
+
+The script cannot clear the current shell's in-memory list. Run `history -c`
+in each open shell after this command. To avoid writing history at all, start a
+shell with MARIA_NO_HISTORY=1. See docs/policy/data-handling.md.
+
+AUTHORIZED USE ONLY: clear only history you own or are authorized to handle.
+EOF
+}
+
+log() { printf '[clear-history] %s\n' "$*"; }
+die() { printf '[clear-history] ERROR: %s\n' "$*" >&2; exit 1; }
+
+while (($#)); do
+    case "$1" in
+        --yes|-y) confirm=1; shift ;;
+        -h|--help) usage; exit 0 ;;
+        --) shift; break ;;
+        -*) die "unknown option: $1 (try --help)" ;;
+        *) die "unexpected argument: $1" ;;
+    esac
+done
+(($# == 0)) || die "unexpected arguments: $*"
+
+[[ -n "${HOME:-}" ]] || die "HOME is unset"
+
+candidates=()
+[[ -n "${HISTFILE:-}" ]] && candidates+=("$HISTFILE")
+candidates+=(
+    "$HOME/.bash_history"
+    "$HOME/.zsh_history"
+    "$HOME/.python_history"
+    "$HOME/.local/state/bash/history"
+    "$HOME/.lesshst"
+    "$HOME/.viminfo"
+    "$HOME/.wget-hsts"
+    "$HOME/.mysql_history"
+    "$HOME/.psql_history"
+    "$HOME/.sqlite_history"
+    "$HOME/.node_repl_history"
+)
+
+files=()
+for file in "${candidates[@]}"; do
+    [[ -n "$file" && -f "$file" && ! -L "$file" ]] && files+=("$file")
+done
+
+if ((${#files[@]} == 0)); then
+    log "no history files found"
+else
+    for file in "${files[@]}"; do
+        printf '%s\n' "$file"
+    done
+fi
+
+if ((confirm == 0)); then
+    log "dry run: ${#files[@]} file(s) would be shredded; re-run with --yes"
+    log "in-memory history is not listed; use 'history -c' in each open shell"
+    exit 0
+fi
+
+failures=0
+for file in "${files[@]}"; do
+    if command -v shred >/dev/null 2>&1; then
+        if ! shred -u -- "$file"; then
+            printf '[clear-history] FAILED to shred: %s\n' "$file" >&2
+            failures=$((failures + 1))
+        fi
+    else
+        if ! rm -f -- "$file"; then
+            printf '[clear-history] FAILED to remove: %s\n' "$file" >&2
+            failures=$((failures + 1))
+        fi
+    fi
+done
+
+sync || true
+if ((failures)); then
+    log "completed with $failures failure(s)"
+    exit 1
+fi
+log "removed ${#files[@]} history file(s)"
+log "now run 'history -c' in each open shell, or close those shells"

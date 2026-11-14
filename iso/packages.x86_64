@@ -31,9 +31,11 @@ less
 man-db
 pacman-contrib
 
-# Networking and Bluetooth
+# Networking and Bluetooth. Bluetooth is installed for optional peripherals but
+# its service is masked; it is not a boot-time listener.
 networkmanager
 network-manager-applet
+nftables
 wpa_supplicant
 wireless-regdb
 iw

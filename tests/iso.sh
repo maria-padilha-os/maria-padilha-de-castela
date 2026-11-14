@@ -40,6 +40,19 @@ for file in \
     iso/airootfs/etc/motd \
     iso/airootfs/etc/maria-padilha-release \
     iso/airootfs/etc/os-release \
+    iso/airootfs/etc/nftables.conf \
+    iso/airootfs/etc/NetworkManager/conf.d/10-maria-private.conf \
+    iso/airootfs/etc/profile.d/10-maria-private.sh \
+    iso/airootfs/etc/systemd/journald.conf.d/10-maria-private.conf \
+    iso/airootfs/etc/systemd/coredump.conf.d/10-maria-private.conf \
+    iso/airootfs/home/maria/.bashrc \
+    iso/airootfs/home/maria/.bash_profile \
+    iso/airootfs/home/maria/Captures/README.md \
+    iso/airootfs/usr/local/bin/maria-wipe-captures \
+    iso/airootfs/usr/local/bin/maria-clear-history \
+    iso/airootfs/usr/share/doc/maria-padilha/data-handling.md \
+    iso/airootfs/usr/share/doc/maria-padilha/network-hardening.md \
+    iso/airootfs/usr/share/doc/maria-padilha/sandboxing.md \
     iso/airootfs/etc/greetd/config.toml \
     iso/airootfs/etc/mkinitcpio.conf.d/archiso.conf \
     iso/efiboot/loader/entries/01-maria-padilha-de-castela-linux.conf \
@@ -68,16 +81,29 @@ for file in \
     docs/policy/security-tool-groups.md \
     docs/policy/forensics-capabilities.md \
     docs/policy/lab-vm-isolation.md \
+    docs/policy/network-hardening.md \
+    docs/policy/sandboxing.md \
+    docs/policy/data-handling.md \
+    tests/hardening.sh \
     tests/security-groups.sh \
     tests/cyber-frontend.sh; do
     require_file "$file"
 done
 
-for executable in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh; do
+for executable in \
+    build.sh tests/all.sh tests/iso.sh tests/hardening.sh \
+    tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh \
+    iso/airootfs/usr/local/bin/maria-wipe-captures \
+    iso/airootfs/usr/local/bin/maria-clear-history; do
     require_exec "$executable"
 done
 
-for script in build.sh tests/all.sh tests/iso.sh tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh; do
+for script in \
+    build.sh tests/all.sh tests/iso.sh tests/hardening.sh \
+    tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh \
+    iso/airootfs/usr/local/bin/maria-wipe-captures \
+    iso/airootfs/usr/local/bin/maria-clear-history \
+    iso/airootfs/etc/profile.d/10-maria-private.sh; do
     if bash -n "$script" 2>/dev/null; then
         ok "$script syntax"
     else
@@ -149,6 +175,7 @@ required_packages=(
     syslinux
     zstd
     networkmanager
+    nftables
     wpa_supplicant
     wireless-regdb
     iw
@@ -308,10 +335,27 @@ if [[ -L iso/airootfs/etc/systemd/system/multi-user.target.wants/NetworkManager.
 else
     bad "NetworkManager.service is not enabled"
 fi
-if [[ -L iso/airootfs/etc/systemd/system/multi-user.target.wants/bluetooth.service ]]; then
-    ok "bluetooth.service is enabled"
+if [[ -L iso/airootfs/etc/systemd/system/multi-user.target.wants/nftables.service ]]; then
+    ok "nftables.service is enabled"
 else
-    bad "bluetooth.service is not enabled"
+    bad "nftables.service is not enabled"
+fi
+if [[ -L iso/airootfs/etc/systemd/system/bluetooth.service ]] &&
+    [[ "$(readlink iso/airootfs/etc/systemd/system/bluetooth.service)" == "/dev/null" ]]; then
+    ok "bluetooth.service is masked"
+else
+    bad "bluetooth.service is not masked"
+fi
+if [[ -e iso/airootfs/etc/systemd/system/multi-user.target.wants/bluetooth.service ]]; then
+    bad "bluetooth.service is enabled at boot"
+else
+    ok "bluetooth.service is not enabled at boot"
+fi
+if [[ -s iso/airootfs/etc/nftables.conf ]] &&
+    grep -qE 'hook input[^;]*;[[:space:]]*policy drop' iso/airootfs/etc/nftables.conf; then
+    ok "nftables input policy denies by default"
+else
+    bad "nftables input policy is not default-deny"
 fi
 
 # Profile boot files.
@@ -373,8 +417,9 @@ fi
 # them, so it is excluded from this reference check and covered separately by
 # tests/security-groups.sh. The private cyber frontend names tools in its tab
 # manifest but has no process spawner; its no-auto-run rule is covered by
-# tests/cyber-frontend.sh.
-if grep -RqiE --exclude='packagechooser.conf' --exclude='notes.conf' --exclude='*.service' --exclude-dir='cyber' '(^|[^[:alnum:]_])(nmap|masscan|zmap|nikto|openvas|nessus|tcpdump|tshark|dumpcap)([^[:alnum:]_]|$)' iso/airootfs 2>/dev/null; then
+# tests/cyber-frontend.sh. Operator documentation under usr/share/doc names the
+# tools but is not an executable unit or profile, so Markdown is excluded too.
+if grep -RqiE --exclude='packagechooser.conf' --exclude='notes.conf' --exclude='*.service' --exclude='*.md' --exclude-dir='cyber' '(^|[^[:alnum:]_])(nmap|masscan|zmap|nikto|openvas|nessus|tcpdump|tshark|dumpcap)([^[:alnum:]_]|$)' iso/airootfs 2>/dev/null; then
     bad "scanner or capture reference in airootfs overlay (no default scans)"
 else
     ok "no scanner or capture reference in airootfs overlay"

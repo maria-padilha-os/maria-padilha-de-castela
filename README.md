@@ -10,8 +10,9 @@ not a general-purpose distribution.
 
 ## Status
 
-**Base decision accepted; archiso scaffold, installer group selection, and the
-private cyber frontend in place.** [ADR 0001](docs/adr/0001-cybersecurity-os-base.md)
+**Base decision accepted; archiso scaffold, installer group selection, private
+cyber frontend, and conservative network/privacy defaults in place.** [ADR
+0001](docs/adr/0001-cybersecurity-os-base.md)
 chooses **Archiso + Calamares** with a curated package set from BlackArch as a
 package source, not as the base image. The first buildable profile is in
 [`iso/`](iso): boot layout, pinned Arch/BlackArch sources, keyring policy, a
@@ -25,6 +26,9 @@ tests run anywhere; the ISO is built only inside an Arch container, and
 Read next:
 
 - [Authorized-use boundary](docs/policy/authorized-use.md)
+- [Network, service, and telemetry hardening](docs/policy/network-hardening.md)
+- [Sandboxing choices and limits](docs/policy/sandboxing.md)
+- [Secrets, logs, shell history, and captured data](docs/policy/data-handling.md)
 - [Authorized security tool groups](docs/policy/security-tool-groups.md)
 - [Wireshark/forensics capabilities and revocation](docs/policy/forensics-capabilities.md)
 - [Isolated lab/VM network and snapshot policy](docs/policy/lab-vm-isolation.md)
@@ -39,6 +43,8 @@ installed on the host and the live root does not install packages at boot.
 - Nmap, Wireshark/forensics, and an isolated lab/VM launcher
 - explicit authorized-lab mode, target-scope indicator, and stop/clear action
 - no default scans, no bundled phishing templates, no credential theft
+- default-deny inbound firewall, no telemetry, and masked unused listeners
+- sandboxing, secrets, shell-history, and captured-data wipe guidance
 - hardened defaults and a private signed release pipeline
 
 ## Profile
@@ -50,6 +56,11 @@ installed on the host and the live root does not install packages at boot.
 | `iso/pacman.conf` | pinned Arch archive and BlackArch sources, strict signatures |
 | `iso/keys/` | keyring pins and public-key policy; no private key material |
 | `iso/denylist.txt` | phishing and credential-theft packages excluded from the image |
+| `iso/airootfs/etc/nftables.conf` | default-deny inbound firewall |
+| `iso/airootfs/etc/systemd/system/` | enabled units and masks for unused listeners |
+| `iso/airootfs/etc/NetworkManager/conf.d/` | telemetry/connectivity-probe disablement |
+| `iso/airootfs/etc/profile.d/`, `iso/airootfs/home/maria/` | shell-history and capture defaults |
+| `iso/airootfs/usr/local/bin/` | operator-run capture/history wipe workflow |
 | `iso/airootfs/etc/calamares/` | installer sequence, authorized-use notice, branding, group chooser |
 | `iso/airootfs/usr/share/maria-padilha/cyber/` | private cyber tabs installed in the image |
 | `frontend/cyber/` | source for the exclusive cyber frontend, manifest, and tests |
@@ -57,12 +68,20 @@ installed on the host and the live root does not install packages at boot.
 | `iso/efiboot/`, `iso/syslinux/` | UEFI and BIOS boot entries |
 | `build.sh` | container-only mkarchiso wrapper |
 | `tests/iso.sh` | profile, package, secret, and public-release checks |
+| `tests/hardening.sh` | firewall, service, telemetry, and credential checks |
 
 The desktop is mandatory: Hyprland, Quickshell, the Qt 6 runtime, the session
 daemons, greetd/tuigreet, and the `maria-padilha` session package are in the
 allowlist. The security baseline is deliberately small: Nmap, Wireshark,
 packet/forensic inspection, and an isolated QEMU/libvirt lab. No scanner or
 capture tool is started automatically.
+
+Only greetd, NetworkManager, and nftables are enabled at boot. Bluetooth, the
+OpenSSH server, libvirt and its sockets, container sockets, Avahi, CUPS, and
+rpcbind are masked; the tools remain installed for explicit, user-started work.
+NetworkManager connectivity probing is off, journald is volatile, coredump
+storage is disabled, and the image ships no telemetry agent. See
+[network hardening](docs/policy/network-hardening.md).
 
 ## Installer security tool groups
 

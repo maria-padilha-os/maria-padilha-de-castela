@@ -84,7 +84,16 @@ for file in \
     docs/policy/network-hardening.md \
     docs/policy/sandboxing.md \
     docs/policy/data-handling.md \
+    docs/private-ci.md \
+    docs/release-checklist.md \
+    .github/workflows/private-ci.yml \
+    ci/check-private-access.sh \
+    ci/private-ci.sh \
+    ci/qemu-smoke.sh \
+    ci/record-checksums.sh \
+    ci/verify-checksums.sh \
     tests/hardening.sh \
+    tests/private-ci.sh \
     tests/security-groups.sh \
     tests/cyber-frontend.sh; do
     require_file "$file"
@@ -92,7 +101,9 @@ done
 
 for executable in \
     build.sh tests/all.sh tests/iso.sh tests/hardening.sh \
-    tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh \
+    tests/security-groups.sh tests/cyber-frontend.sh tests/private-ci.sh \
+    ci/check-private-access.sh ci/private-ci.sh ci/qemu-smoke.sh \
+    ci/record-checksums.sh ci/verify-checksums.sh iso/profiledef.sh \
     iso/airootfs/usr/local/bin/maria-wipe-captures \
     iso/airootfs/usr/local/bin/maria-clear-history; do
     require_exec "$executable"
@@ -100,7 +111,9 @@ done
 
 for script in \
     build.sh tests/all.sh tests/iso.sh tests/hardening.sh \
-    tests/security-groups.sh tests/cyber-frontend.sh iso/profiledef.sh \
+    tests/security-groups.sh tests/cyber-frontend.sh tests/private-ci.sh \
+    ci/check-private-access.sh ci/private-ci.sh ci/qemu-smoke.sh \
+    ci/record-checksums.sh ci/verify-checksums.sh iso/profiledef.sh \
     iso/airootfs/usr/local/bin/maria-wipe-captures \
     iso/airootfs/usr/local/bin/maria-clear-history \
     iso/airootfs/etc/profile.d/10-maria-private.sh; do
@@ -431,13 +444,21 @@ else
 fi
 
 # Secret and credential scan over the working tree (tracked and untracked).
+# -r does not follow the archiso -> iso compatibility symlink, so broken
+# symlinks cannot turn a real hit into grep's "error" exit status.
 secret_pattern='(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{35}|xox[baprs]-[0-9A-Za-z-]{10,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY-----)'
 secret_hits="$(mktemp)"
-if grep -RInE --exclude-dir=.git --exclude-dir=out --exclude-dir=.scratch -- "$secret_pattern" . >"$secret_hits" 2>/dev/null; then
+set +e
+grep -rInE --exclude-dir=.git --exclude-dir=out --exclude-dir=.scratch -- "$secret_pattern" . >"$secret_hits" 2>/dev/null
+secret_rc=$?
+set -e
+if ((secret_rc == 0)); then
     bad "possible tracked secret or API key"
     cat "$secret_hits"
-else
+elif ((secret_rc == 1)); then
     ok "no obvious API key or private key"
+else
+    bad "secret scan could not read every file (grep exit $secret_rc)"
 fi
 rm -f "$secret_hits"
 

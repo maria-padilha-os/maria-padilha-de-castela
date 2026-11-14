@@ -10,9 +10,9 @@ not a general-purpose distribution.
 
 ## Status
 
-**Base decision accepted; archiso scaffold, installer group selection, private
-cyber frontend, and conservative network/privacy defaults in place.** [ADR
-0001](docs/adr/0001-cybersecurity-os-base.md)
+**Base decision accepted; archiso scaffold, installer group selection, the
+private cyber frontend, conservative network/privacy defaults, and private CI
+in place.** [ADR 0001](docs/adr/0001-cybersecurity-os-base.md)
 chooses **Archiso + Calamares** with a curated package set from BlackArch as a
 package source, not as the base image. The first buildable profile is in
 [`iso/`](iso): boot layout, pinned Arch/BlackArch sources, keyring policy, a
@@ -21,7 +21,8 @@ an offline-safe Calamares packagechooser for the optional authorized tool groups
 The exclusive security tabs live in [`frontend/cyber/`](frontend/cyber/README.md)
 and are copied into the image at `/usr/share/maria-padilha/cyber/`. The static
 tests run anywhere; the ISO is built only inside an Arch container, and
-[`build.sh`](build.sh) refuses to run on a host.
+[`build.sh`](build.sh) refuses to run on a host. Private CI keeps the ISO in
+repository-scoped artifacts and never publishes it.
 
 Read next:
 
@@ -33,6 +34,8 @@ Read next:
 - [Wireshark/forensics capabilities and revocation](docs/policy/forensics-capabilities.md)
 - [Isolated lab/VM network and snapshot policy](docs/policy/lab-vm-isolation.md)
 - [Legal, licensing, and export considerations](docs/policy/legal-licensing-export.md)
+- [Private CI and artifact handling](docs/private-ci.md)
+- [Private release checklist](docs/release-checklist.md)
 - [Reference build](build/README.md)
 
 
@@ -66,9 +69,14 @@ installed on the host and the live root does not install packages at boot.
 | `frontend/cyber/` | source for the exclusive cyber frontend, manifest, and tests |
 | `iso/airootfs/` | authorized-use banner, live user, greetd, enabled units, mkinitcpio |
 | `iso/efiboot/`, `iso/syslinux/` | UEFI and BIOS boot entries |
+| `.github/workflows/private-ci.yml` | private-repository-only build, tests, QEMU serial smoke boot, artifact retention |
+| `ci/` | access guard, checksum recording/verification, QEMU smoke boot, CI entry point |
+| `docs/private-ci.md` | CI access rules, artifact handling, retention, and revocation |
+| `docs/release-checklist.md` | explicit human approval and offline private-key release procedure |
 | `build.sh` | container-only mkarchiso wrapper |
 | `tests/iso.sh` | profile, package, secret, and public-release checks |
 | `tests/hardening.sh` | firewall, service, telemetry, and credential checks |
+| `tests/private-ci.sh` | checksum, access-control, artifact-retention, and CI configuration checks |
 
 The desktop is mandatory: Hyprland, Quickshell, the Qt 6 runtime, the session
 daemons, greetd/tuigreet, and the `maria-padilha` session package are in the
@@ -216,3 +224,27 @@ make test
 The build output is gitignored under `out/`. Treat it as a private artifact:
 record its hash and the verified signing-key fingerprint in the private release
 record outside this repository, never in a public release.
+
+## Private CI and release
+
+[`.github/workflows/private-ci.yml`](.github/workflows/private-ci.yml) refuses to
+run unless the repository is private, GitHub Pages is disabled, and there is no
+published GitHub Release. It runs `tests/all.sh`, builds the ISO in a disposable
+Arch container, records `SHA256SUMS`, boots the exact ISO in QEMU with no
+network and a serial console, and uploads the ISO, checksum, serial log, and
+build metadata only as repository-scoped GitHub Actions artifacts. There is no
+Pages job, GitHub Release, package mirror, registry push, or unauthenticated
+artifact URL. The workflow token is read-only.
+
+Ordinary CI artifacts are retained for 14 days. A manual release-candidate run
+can re-retain a verified artifact for 90 days behind the `private-release`
+environment, which must be configured with required reviewers. That artifact is
+**not signed and not a release**.
+
+A real release requires [the private release checklist](docs/release-checklist.md):
+explicit human approval recorded outside this checkout, an offline
+passphrase-protected private signing key, a detached signature over
+`SHA256SUMS`, and private encrypted storage. [Private CI and artifact
+handling](docs/private-ci.md) documents access rules, artifact retention, and
+key/artifact revocation. Never put the signing key, passphrase, or private
+release record in CI, the repository, or an artifact.

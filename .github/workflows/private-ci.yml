@@ -1,0 +1,174 @@
+name: Private CI
+
+# Private build and smoke-test pipeline for the cyber image.
+#
+# The source may be reviewed through the repository's own access rules, but the
+# built image is private. This workflow uploads only through repository-scoped
+# GitHub Actions artifacts: there is no Pages deployment, no GitHub Release, no
+# package-registry publication, and no public artifact URL. The first job fails
+# closed when the repository is public, Pages is enabled, or a published release
+# already exists.
+#
+# The release signing key is offline. CI never signs, never receives the key,
+# and never produces release notes. A CI artifact is not a release; see
+# docs/release-checklist.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_candidate:
+        description: "Re-retain this build as a private release candidate (still unsigned)"
+        type: boolean
+        default: false
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+jobs:
+  access-guard:
+    name: Require private repository and no public channels
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the guard
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Refuse public repository, Pages, or published releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./ci/check-private-access.sh --online
+
+  static-tests:
+    name: Repository tests
+    needs: access-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run the repository test suite
+        run: bash tests/all.sh
+
+  build-and-smoke:
+    name: Build ISO and QEMU serial smoke boot
+    needs: static-tests
+    # Use a private self-hosted runner with at least 20 GiB free for the real
+    # build; ubuntu-latest is only adequate for small profiles. Set the
+    # PRIVATE_CI_RUNNER repository variable to override the label.
+    runs-on: ${{ vars.PRIVATE_CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check the private build disk budget
+        run: |
+          set -euo pipefail
+          available_gib=$(( $(df -Pk "$PWD" | awk 'NR==2 { print $4 }') / 1024 / 1024 ))
+          echo "available disk: ${available_gib} GiB"
+          if (( available_gib < 20 )); then
+            echo "::error::The private ISO build needs at least 20 GiB free. Set PRIVATE_CI_RUNNER to a private runner with enough disk."
+            exit 1
+          fi
+
+      - name: Build and smoke-test in a disposable Arch container
+        run: |
+          set -euo pipefail
+          mkdir -p out .scratch
+          epoch="$(git log -1 --format=%ct)"
+          docker run --rm --privileged \
+            --env GITHUB_SHA \
+            --env GITHUB_RUN_ID \
+            --env GITHUB_REF_NAME \
+            --env GITHUB_REPOSITORY \
+            --env SOURCE_DATE_EPOCH="$epoch" \
+            --volume "$PWD:/work" \
+            --workdir /work \
+            archlinux:latest \
+            /bin/bash -lc '
+              set -euo pipefail
+              pacman -Syu --needed --noconfirm archiso qemu-system-x86 qemu-img git
+              ./ci/private-ci.sh
+            '
+
+      - name: Upload private build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-ci-${{ github.run_id }}
+          path: |
+            out/*.iso
+            out/SHA256SUMS
+            out/qemu-serial.log
+            out/build-metadata.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  private-release-candidate:
+    name: Retain private release candidate
+    needs: build-and-smoke
+    if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Configure this environment in the private repository with required
+    # reviewers and a protected branch/tag rule. Without those settings this
+    # job is not an approval gate, so the release checklist still applies.
+    environment: private-release
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the verifier
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the private CI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: private-ci-${{ github.run_id }}
+          path: out
+
+      - name: Verify the candidate before retaining it
+        run: |
+          set -euo pipefail
+          bash ci/verify-checksums.sh out/SHA256SUMS out
+          grep -qx "run_id=${GITHUB_RUN_ID}" out/build-metadata.txt
+          grep -qx "commit=${GITHUB_SHA}" out/build-metadata.txt
+          grep -qF 'AUTHORIZED USE ONLY' out/qemu-serial.log
+          if grep -qiE 'kernel panic|end kernel panic|not syncing' out/qemu-serial.log; then
+            echo "serial log contains a kernel panic" >&2
+            exit 1
+          fi
+          if grep -Eq 'password|passphrase|token|BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY' \
+            out/build-metadata.txt out/SHA256SUMS; then
+            echo "candidate metadata contains secret-like material" >&2
+            exit 1
+          fi
+
+      - name: Upload private release-candidate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-release-candidate-${{ github.run_id }}
+          path: |
+            out/*.iso
+            out/SHA256SUMS
+            out/qemu-serial.log
+            out/build-metadata.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90

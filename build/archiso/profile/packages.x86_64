@@ -19,6 +19,7 @@ amd-ucode
 mkinitcpio
 sudo
 networkmanager
+nftables
 iwd
 openssh
 git

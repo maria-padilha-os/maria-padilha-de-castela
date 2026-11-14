@@ -41,6 +41,23 @@ for f in \
   build/archiso/profile/airootfs/etc/calamares/modules/packages.conf \
   docs/policy/security-tool-groups.md \
   docs/policy/forensics-capabilities.md \
+  docs/policy/network-hardening.md \
+  docs/policy/sandboxing.md \
+  docs/policy/data-handling.md \
+  iso/airootfs/etc/nftables.conf \
+  iso/airootfs/etc/NetworkManager/conf.d/10-maria-private.conf \
+  iso/airootfs/etc/profile.d/10-maria-private.sh \
+  iso/airootfs/etc/systemd/journald.conf.d/10-maria-private.conf \
+  iso/airootfs/etc/systemd/coredump.conf.d/10-maria-private.conf \
+  iso/airootfs/home/maria/.bashrc \
+  iso/airootfs/home/maria/.bash_profile \
+  iso/airootfs/home/maria/Captures/README.md \
+  iso/airootfs/usr/local/bin/maria-wipe-captures \
+  iso/airootfs/usr/local/bin/maria-clear-history \
+  iso/airootfs/usr/share/doc/maria-padilha/data-handling.md \
+  iso/airootfs/usr/share/doc/maria-padilha/network-hardening.md \
+  iso/airootfs/usr/share/doc/maria-padilha/sandboxing.md \
+  tests/hardening.sh \
   tests/security-groups.sh \
   tests/cyber-frontend.sh \
   frontend/cyber/manifest.json \
@@ -257,6 +274,12 @@ if bash tests/security-groups.sh; then
   echo "ok tests/security-groups.sh"
 else
   echo "FAIL tests/security-groups.sh"
+  fail=1
+fi
+if bash tests/hardening.sh; then
+  echo "ok tests/hardening.sh"
+else
+  echo "FAIL tests/hardening.sh"
   fail=1
 fi
 if bash tests/iso.sh; then

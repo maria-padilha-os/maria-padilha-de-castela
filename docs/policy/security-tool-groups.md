@@ -36,10 +36,11 @@ them. Optional groups are additive package lists only.
 ### Core (mandatory)
 
 The core group contains the Arch base, kernel/firmware/microcode, archiso boot
-support, networking, the mandatory Hyprland/Quickshell desktop and session,
-greetd/tuigreet, Calamares, the Arch/BlackArch keyrings, and the reviewed
-baseline: Nmap, Wireshark, tcpdump, The Sleuth Kit, TestDisk, QEMU, libvirt,
-virt-manager, OVMF, and Firejail. Every core package is in
+support, networking with the default-deny nftables policy, the mandatory
+Hyprland/Quickshell desktop and session, greetd/tuigreet, Calamares, the
+Arch/BlackArch keyrings, and the reviewed baseline: Nmap, Wireshark, tcpdump,
+The Sleuth Kit, TestDisk, QEMU, libvirt, virt-manager, OVMF, and Firejail. Every
+core package is in
 [`iso/packages.x86_64`](../../iso/packages.x86_64).
 
 ### Optional groups
@@ -137,9 +138,10 @@ The installer group selection is intentionally passive:
   the package manager only;
 - no group adds a systemd unit, timer, cron job, shell profile, autostart
   entry, or Calamares post-install hook;
-- libvirtd, bluetooth, NetworkManager, and the desktop session are not enabled
-  by the group configuration; only the existing greetd/NetworkManager/bluetooth
-  live-image units are enabled by the profile;
+- libvirtd, bluetooth, the OpenSSH server, and the desktop session are not
+  enabled by the group configuration; the live image enables only greetd,
+  NetworkManager, and nftables, and masks the other listeners (see
+  [`network-hardening.md`](network-hardening.md));
 - no target list is populated from the local network or captured traffic;
 - no interface is captured, no capture file is uploaded, and no packet is
   injected or replayed by the installer or the frontend; the Wireshark/forensics

@@ -125,19 +125,29 @@ Run these on the built image or in a live VM. Do not sign until they pass.
      Calamares hook starts `nmap`, `masscan`, `zmap`, or an equivalent scanner.
    - No packet capture starts automatically.
    - No target list is populated from the local network.
-5. **No phishing or credential theft**
+   - `tests/hardening.sh` passes, including the no-auto-run checks.
+5. **Firewall, services, and telemetry**
+   - `nftables.conf` has a default-deny input and forward policy, and
+     `nftables.service` is enabled.
+   - Only greetd, NetworkManager, and nftables are enabled; Bluetooth, the SSH
+     server, libvirt, container sockets, Avahi, CUPS, and rpcbind are masked.
+   - NetworkManager connectivity probing is disabled, journald is volatile, and
+     coredump storage is disabled.
+   - No telemetry or analytics agent is in the package allowlist.
+6. **No phishing or credential theft**
    - No email templates, landing pages, credential-capture forms, or cloneable
      login pages are present.
    - No credential-dumping, keylogging, or browser/keychain extraction package is
      present.
    - SET and the other denylisted packages are absent.
-6. **Installer and first boot**
+7. **Installer and first boot**
    - Offline install in a VM succeeds with Calamares and no optional group
      selected; selected groups install only with network access or a local cache.
    - First boot shows the banner.
    - SSH server is not enabled by default.
    - No unexpected outbound connection is made by the live session.
-7. **Size and manifest**
+   - The capture/history wipe commands are present and are not boot actions.
+8. **Size and manifest**
    - ISO size is within the design budget (≤ 6 GiB compressed).
    - Installed size is within the design budget (≤ 12 GiB).
    - Record `pacman -Q`, ISO SHA-256, build date, mirror snapshots, and the

@@ -132,7 +132,7 @@ expect_pkg() {
     fi
 }
 
-for pkg in base calamares nmap wireshark-qt sleuthkit qemu-desktop libvirt; do
+for pkg in base calamares nftables nmap wireshark-qt sleuthkit qemu-desktop libvirt; do
     expect_pkg core "$pkg"
 done
 

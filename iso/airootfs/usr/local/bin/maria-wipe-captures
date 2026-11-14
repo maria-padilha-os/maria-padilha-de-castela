@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# Shred local capture files in an explicit directory.
+#
+# This is an operator-run workflow, never a boot action. It is deliberately
+# dry-run by default and refuses broad or system directories. It never uses
+# sudo or another privilege-escalation tool; if the files are not writable by
+# the operator, it reports the failure and exits non-zero.
+set -Eeuo pipefail
+
+script_name="${0##*/}"
+confirm=0
+wipe_all=0
+use_shred=1
+target=""
+
+usage() {
+    cat <<EOF
+usage: $script_name [--yes] [--all] [--no-shred] [DIR]
+
+Shred captured data under DIR. DIR defaults to \$HOME/Captures.
+
+By default only capture files are selected: *.pcap, *.pcapng, *.cap, and the
+same names compressed with .gz, .xz, or .zst. Use --all to select every regular
+file under DIR instead. Subdirectories are traversed but the filesystem boundary
+is not crossed.
+
+Without --yes the command is a dry run and lists what would be removed. --yes
+is required before anything is destroyed. --no-shred uses rm instead of shred
+for filesystems where overwriting is unsupported or pointless.
+
+This command does not clear shell history. Run maria-clear-history in each
+sensitive shell before closing it.
+
+AUTHORIZED USE ONLY: wipe only data you own or are authorized to handle.
+EOF
+}
+
+log() { printf '[wipe-captures] %s\n' "$*"; }
+die() { printf '[wipe-captures] ERROR: %s\n' "$*" >&2; exit 1; }
+
+while (($#)); do
+    case "$1" in
+        --yes|-y) confirm=1; shift ;;
+        --all) wipe_all=1; shift ;;
+        --no-shred) use_shred=0; shift ;;
+        -h|--help) usage; exit 0 ;;
+        --) shift; break ;;
+        -*) die "unknown option: $1 (try --help)" ;;
+        *)
+            [[ -z "$target" ]] || die "only one directory may be given"
+            target="$1"
+            shift
+            ;;
+    esac
+done
+
+if (($#)); then
+    [[ -z "$target" ]] || die "unexpected arguments: $*"
+    target="$1"
+    (($# == 1)) || die "only one directory may be given"
+fi
+
+if [[ -z "$target" ]]; then
+    [[ -n "${HOME:-}" ]] || die "HOME is unset; give an explicit directory"
+    target="$HOME/Captures"
+fi
+
+[[ "$target" == /* ]] || die "DIR must be an absolute path: $target"
+[[ -e "$target" ]] || die "directory does not exist: $target"
+[[ -d "$target" ]] || die "not a directory: $target"
+[[ ! -L "$target" ]] || die "refusing to follow a symlinked directory: $target"
+
+resolved="$(realpath -e -- "$target")"
+case "$resolved" in
+    /|/bin|/boot|/dev|/etc|/home|/lib|/lib64|/opt|/proc|/root|/run|/sbin|/srv|/sys|/tmp|/usr|/var)
+        die "refusing to wipe a system or shared directory: $resolved"
+        ;;
+esac
+# Require at least two path components (for example /home/maria/Captures or
+# /mnt/captures). This stops a typo such as "/mnt" from becoming a broad wipe.
+if [[ "$resolved" =~ ^/[^/]+$ ]]; then
+    die "refusing to wipe a top-level directory: $resolved"
+fi
+
+log "directory: $resolved"
+if ((wipe_all)); then
+    log "selection: every regular file (--all)"
+    mapfile -d '' files < <(find "$resolved" -xdev -type f -print0)
+else
+    log "selection: capture files only (use --all for every file)"
+    mapfile -d '' files < <(
+        find "$resolved" -xdev -type f \
+            \( -name '*.pcap' -o -name '*.pcapng' -o -name '*.cap' \
+               -o -name '*.pcap.gz' -o -name '*.pcapng.gz' -o -name '*.cap.gz' \
+               -o -name '*.pcap.xz' -o -name '*.pcapng.xz' -o -name '*.cap.xz' \
+               -o -name '*.pcap.zst' -o -name '*.pcapng.zst' -o -name '*.cap.zst' \) \
+            -print0
+    )
+fi
+
+if ((${#files[@]} == 0)); then
+    log "nothing to wipe"
+    exit 0
+fi
+
+for file in "${files[@]}"; do
+    printf '%s\n' "$file"
+done
+
+if ((confirm == 0)); then
+    log "dry run: ${#files[@]} file(s) would be shredded; re-run with --yes"
+    exit 0
+fi
+
+failures=0
+for file in "${files[@]}"; do
+    [[ -f "$file" && ! -L "$file" ]] || continue
+    if ((use_shred)) && command -v shred >/dev/null 2>&1; then
+        if ! shred -u -- "$file"; then
+            printf '[wipe-captures] FAILED to shred: %s\n' "$file" >&2
+            failures=$((failures + 1))
+        fi
+    else
+        if ! rm -f -- "$file"; then
+            printf '[wipe-captures] FAILED to remove: %s\n' "$file" >&2
+            failures=$((failures + 1))
+        fi
+    fi
+done
+
+# Ask the kernel to flush completed writes. This does not make overwrite
+# reliable on SSDs, copy-on-write filesystems, snapshots, or remote storage.
+sync || true
+
+if ((failures)); then
+    log "completed with $failures failure(s)"
+    exit 1
+fi
+log "wiped ${#files[@]} file(s)"
+log "also run maria-clear-history --yes, then close sensitive shells"

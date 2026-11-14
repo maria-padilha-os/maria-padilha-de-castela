@@ -29,4 +29,10 @@ file_permissions=(
   ["/etc/shadow"]="0:0:400"
   ["/etc/sudoers.d/10-maria-live"]="0:0:440"
   ["/root"]="0:0:750"
+  # The live user's capture directory and shell defaults are owner-only.
+  ["/home/maria"]="1000:1000:700"
+  ["/home/maria/.bashrc"]="1000:1000:600"
+  ["/home/maria/.bash_profile"]="1000:1000:600"
+  ["/home/maria/Captures"]="1000:1000:700"
+  ["/home/maria/Captures/README.md"]="1000:1000:600"
 )

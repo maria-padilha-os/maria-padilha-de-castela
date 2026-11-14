@@ -27,3 +27,25 @@ The authorized-use banner in `iso/airootfs/etc/issue` and
 `iso/airootfs/etc/motd` is part of the image, not a substitute for permission.
 Use the image only on systems you own or have explicit written permission to
 test.
+
+## Default privacy and network posture
+
+The private image is built conservative by default:
+
+- new inbound connections are dropped by the nftables policy in
+  `iso/airootfs/etc/nftables.conf`;
+- only greetd, NetworkManager, and nftables are enabled at boot; Bluetooth, the
+  OpenSSH server, libvirt and its sockets, container sockets, Avahi, CUPS, and
+  rpcbind are masked;
+- NetworkManager connectivity probing is disabled, journald is volatile, and
+  coredump storage is disabled;
+- no scanner, capture, VM, or dual-use launcher starts automatically;
+- shell history is filtered and bounded, new files are owner-only, and
+  operator-run wipe commands cover captures and history.
+
+The private release record should also note that the firewall and service
+defaults were verified. See
+[`network-hardening.md`](policy/network-hardening.md),
+[`sandboxing.md`](policy/sandboxing.md), and
+[`data-handling.md`](policy/data-handling.md). Do not place a capture, a
+credential, or a shell-history file in the private release record.

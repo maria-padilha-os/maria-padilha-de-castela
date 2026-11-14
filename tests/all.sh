@@ -43,6 +43,15 @@ for f in \
   docs/policy/forensics-capabilities.md \
   tests/security-groups.sh \
   tests/cyber-frontend.sh \
+  tests/private-ci.sh \
+  .github/workflows/private-ci.yml \
+  ci/check-private-access.sh \
+  ci/private-ci.sh \
+  ci/qemu-smoke.sh \
+  ci/record-checksums.sh \
+  ci/verify-checksums.sh \
+  docs/private-ci.md \
+  docs/release-checklist.md \
   frontend/cyber/manifest.json \
   frontend/cyber/src/registry.js \
   frontend/cyber/src/authorization.js \
@@ -263,6 +272,12 @@ if bash tests/iso.sh; then
   echo "ok tests/iso.sh"
 else
   echo "FAIL tests/iso.sh"
+  fail=1
+fi
+if bash tests/private-ci.sh; then
+  echo "ok tests/private-ci.sh"
+else
+  echo "FAIL tests/private-ci.sh"
   fail=1
 fi
 [ "$fail" -eq 0 ]

@@ -22,7 +22,10 @@ bootmodes=('bios.syslinux'
 airootfs_image_type="squashfs"
 airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')
 bootstrap_tarball_compression=('zstd' '-c' '-T0' '--auto-threads=logical' '--long' '-19')
-kernel_params="quiet"
+# Keep the graphical console and mirror boot progress to a serial console. The
+# serial login banner is what the private CI QEMU smoke test waits for, and it
+# also makes headless installer/recovery use possible.
+kernel_params="quiet console=tty0 console=ttyS0,115200 systemd.show_status=1"
 
 declare -A file_permissions=()
 file_permissions=(

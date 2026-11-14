@@ -21,19 +21,26 @@ The release signing key is offline. It must not be generated in this checkout,
 stored in this repository, passed through CI logs, or uploaded with the image.
 
 Before signing, verify the built image in a VM and record the private manifest
-described in [`private-image.md`](private-image.md). Sign the checksum file
-offline, for example:
+described in [`private-image.md`](private-image.md). Then follow the
+[private release checklist](release-checklist.md), which requires explicit human
+approval in the private release record. Sign the checksum file offline, for
+example:
 
 ```sh
-sha256sum maria-padilha-de-castela-*.iso > sha256sums
-gpg --detach-sign --armor sha256sums
-gpg --verify sha256sums.asc sha256sums
+sha256sum maria-padilha-de-castela-*.iso > SHA256SUMS
+gpg --detach-sign --armor SHA256SUMS
+gpg --verify SHA256SUMS.asc SHA256SUMS
 ```
 
-Do not publish `sha256sums`, `sha256sums.asc`, the ISO, or the signing key. The
+Do not publish `SHA256SUMS`, `SHA256SUMS.asc`, the ISO, or the signing key. The
 signature exists so the owner can verify a private artifact, not so the image
 can be redistributed.
 
 The public fingerprint is recorded in the private release record through a
 channel separate from the artifact. No private key material belongs in
-`iso/keys/` or anywhere else in this repository.
+`iso/keys/` or anywhere else in this repository. Keep the offline revocation
+certificate with the key custody material, not in this checkout. If the key is
+compromised or an artifact is revoked, follow the revocation and retention
+procedure in [`private-ci.md`](private-ci.md): stop distribution, revoke the
+key through the private owner channel, preserve the evidence, and rebuild. A
+revoked artifact is never re-signed with the same key.

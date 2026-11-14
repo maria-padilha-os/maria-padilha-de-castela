@@ -145,12 +145,14 @@ Run these on the built image or in a live VM. Do not sign until they pass.
 
 ## Signing and release
 
-The release key is offline and never enters this repository or CI logs.
+The release key is offline and never enters this repository or CI logs. Follow
+[the private release checklist](../docs/release-checklist.md) for explicit human
+approval, private artifact handling, revocation, and retention.
 
 ```bash
-sha256sum maria-padilha-de-castela-*.iso > sha256sums
-gpg --detach-sign --armor sha256sums
-gpg --verify sha256sums.asc sha256sums
+sha256sum maria-padilha-de-castela-*.iso > SHA256SUMS
+gpg --detach-sign --armor SHA256SUMS
+gpg --verify SHA256SUMS.asc SHA256SUMS
 ```
 
 Publish the fingerprint through a channel separate from the artifact host. A

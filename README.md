@@ -1,8 +1,8 @@
 # Maria Padilha de Castela
 
-Private-release cybersecurity desktop image. **The source is public; the built
-image is private and must not be published.** This is an authorized-lab tool,
-not a general-purpose distribution.
+Public-source, private-release cybersecurity desktop image. **The source is
+public; the built image is private and must not be published.** This is an
+authorized-lab tool, not a general-purpose distribution.
 
 > **Do not publish, upload, mirror, or redistribute an ISO from this repository
 > or any build of it.** There is no public release channel, no public artifact

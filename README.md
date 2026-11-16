@@ -248,3 +248,9 @@ passphrase-protected private signing key, a detached signature over
 handling](docs/private-ci.md) documents access rules, artifact retention, and
 key/artifact revocation. Never put the signing key, passphrase, or private
 release record in CI, the repository, or an artifact.
+
+## Support
+
+Maria Padilha is free software under GPL-3.0-only. Donations are optional and
+never unlock features or hold back builds. See [SUPPORT.md](SUPPORT.md) or
+[sponsor development on GitHub](https://github.com/sponsors/Mateus-M-Reis).

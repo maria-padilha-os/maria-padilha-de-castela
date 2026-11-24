@@ -1,5 +1,7 @@
 # Maria Padilha de Castela
 
+[![❤ Sponsor on GitHub](https://img.shields.io/badge/%E2%9D%A4%20Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Mateus-M-Reis)
+
 Public-source, private-release cybersecurity desktop image. **The source is
 public; the built image is private and must not be published.** This is an
 authorized-lab tool, not a general-purpose distribution.

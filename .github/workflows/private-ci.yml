@@ -1,17 +1,18 @@
 name: Private CI
 
-# Private build and smoke-test pipeline for the cyber image.
+# Build and smoke-test pipeline for the public-source, private-release image.
 #
-# The source may be reviewed through the repository's own access rules, but the
-# built image is private. This workflow uploads only through repository-scoped
-# GitHub Actions artifacts: there is no Pages deployment, no GitHub Release, no
-# package-registry publication, and no public artifact URL. The first job fails
-# closed when the repository is public, Pages is enabled, or a published release
-# already exists.
+# The source is public by decision, but the built image is private. In public
+# source mode the static tests and the container build run and the artifacts are
+# intentionally discarded: there is no artifact upload, no Pages deployment, no
+# GitHub Release, no package-registry publication, and no public artifact URL.
+# A private repository keeps repository-scoped Actions artifact retention and
+# the manual private release candidate. The first job fails closed when Pages is
+# enabled, a published release already exists, or the metadata is inconsistent.
 #
 # The release signing key is offline. CI never signs, never receives the key,
 # and never produces release notes. A CI artifact is not a release; see
-# docs/release-checklist.md.
+# docs/release-checklist.md and docs/adr/0002-public-source-private-release.md.
 
 on:
   workflow_dispatch:
@@ -34,16 +35,20 @@ concurrency:
 
 jobs:
   access-guard:
-    name: Require private repository and no public channels
+    name: Detect public-source or private-repository mode
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.check.outputs.mode }}
+      artifact_retention: ${{ steps.check.outputs.artifact_retention }}
     steps:
       - name: Check out the guard
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Refuse public repository, Pages, or published releases
+      - name: Detect mode and refuse Pages, releases, or inconsistent metadata
+        id: check
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./ci/check-private-access.sh --online
@@ -64,7 +69,9 @@ jobs:
 
   build-and-smoke:
     name: Build ISO and QEMU serial smoke boot
-    needs: static-tests
+    needs:
+      - access-guard
+      - static-tests
     # Use a private self-hosted runner with at least 20 GiB free for the real
     # build; ubuntu-latest is only adequate for small profiles. Set the
     # PRIVATE_CI_RUNNER repository variable to override the label.
@@ -106,7 +113,13 @@ jobs:
               ./ci/private-ci.sh
             '
 
+      - name: Discard build artifacts in public-source mode
+        if: needs.access-guard.outputs.mode != 'private'
+        run: |
+          echo "Public-source mode: the build ran, but no ISO or log is uploaded or retained."
+
       - name: Upload private build artifacts
+        if: needs.access-guard.outputs.mode == 'private'
         uses: actions/upload-artifact@v4
         with:
           name: private-ci-${{ github.run_id }}
@@ -121,8 +134,10 @@ jobs:
 
   private-release-candidate:
     name: Retain private release candidate
-    needs: build-and-smoke
-    if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true
+    needs:
+      - access-guard
+      - build-and-smoke
+    if: needs.access-guard.outputs.mode == 'private' && github.event_name == 'workflow_dispatch' && inputs.release_candidate == true
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # Configure this environment in the private repository with required

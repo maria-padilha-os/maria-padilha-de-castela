@@ -1,16 +1,26 @@
-# Private CI
+# Private CI and public-source mode
 
 The build and smoke test run in [`.github/workflows/private-ci.yml`](../.github/workflows/private-ci.yml).
-The workflow is designed for a **private repository**: it refuses to build when
-the repository is public, GitHub Pages is enabled, or a published GitHub
-Release already exists.
+The source repository is public by decision, while the built image, checksums,
+logs, signatures, and release record are private. The workflow therefore has two
+modes:
+
+| detected mode | static checks and container build | artifact upload | Pages / releases / registry |
+| --- | --- | --- | --- |
+| public source | yes | no | no |
+| private repository | yes | repository-scoped Actions artifacts only | no |
+
+Both modes fail closed when GitHub Pages is enabled, a non-draft GitHub Release
+exists, the event and API metadata disagree, or the online check cannot finish.
+The decision is recorded in [ADR 0002](adr/0002-public-source-private-release.md).
 
 ## What the workflow does
 
 1. **Access guard.** [`ci/check-private-access.sh`](../ci/check-private-access.sh)
-   reads the event payload and, with `--online`, the GitHub API. It fails closed
-   unless all of these are true:
-   - `repository.private` is `true` and visibility is `private`;
+   reads the event payload and, with `--online`, the GitHub API. It prints the
+   detected state and the actions it allows:
+   - `repository.private` and visibility must consistently describe a `public`
+     or `private` repository;
    - `has_pages` is `false` (GitHub Pages is disabled);
    - there are no non-draft GitHub Releases.
 2. **Repository tests.** `bash tests/all.sh` runs the static profile, frontend,
@@ -25,22 +35,28 @@ Release already exists.
    - waits for the image's `AUTHORIZED USE ONLY` serial login banner and fails on
      a kernel panic or timeout;
    - verifies the checksum again after the boot.
-4. **Private retention.** The workflow uploads only with
-   `actions/upload-artifact`. Artifact access is the repository's access control:
-   a collaborator with read access to the private repository can download it; no
-   unauthenticated artifact URL is created or printed.
+4. **Retention decision.** In public-source mode the build runs on the runner and
+   the ISO and logs are discarded: no `actions/upload-artifact` step runs, no
+   artifact is named, and no download URL is created. In private-repository mode
+   the workflow may upload only with `actions/upload-artifact`; artifact access
+   is then the private repository's access control, and no unauthenticated
+   artifact URL is created or printed.
 5. **Optional release candidate.** A manual dispatch can set
-   `release_candidate: true`. That job references the `private-release` GitHub
-   Environment, which must be configured with required reviewers. It downloads
-   the CI artifact, re-verifies the checksum and build metadata, and re-uploads
-   it as `private-release-candidate-<run-id>`. It still does not sign anything
-   and is not a release.
+   `release_candidate: true`. That job runs only in private-repository mode and
+   references the `private-release` GitHub Environment, which must be configured
+   with required reviewers. It downloads the CI artifact, re-verifies the
+   checksum and build metadata, and re-uploads it as
+   `private-release-candidate-<run-id>`. It still does not sign anything and is
+   not a release.
 
 The workflow token is limited to `contents: read`. There is no `contents: write`,
 `pages: write`, `packages: write`, or `id-token: write` permission, so the
-workflow cannot create a release, deploy Pages, or publish a package.
+workflow cannot create a release, deploy Pages, or publish a package or container
+image to a registry.
 
 ## Artifact contents and names
+
+These artifacts exist only in private-repository mode.
 
 | artifact | contents | retention |
 | --- | --- | --- |
@@ -53,8 +69,12 @@ tokens, or private-key material; the release-candidate job checks for that.
 
 ## Access rules
 
-- Keep the GitHub repository **private**. The source-review policy does not
-  permit public build artifacts.
+- A public repository is allowed to run the static checks and the container
+  build, but it must have no artifact retention. Do not add an upload step that
+  runs in public-source mode.
+- A **private repository** may retain artifacts through repository-scoped
+  GitHub Actions only. The source-review policy still does not permit public
+  build artifacts.
 - Keep **GitHub Pages disabled** and do not create a Pages workflow.
 - Keep **Releases write access** with the release owner only. Do not create a
   GitHub Release, draft or published, as a distribution channel.
@@ -63,10 +83,10 @@ tokens, or private-key material; the release-candidate job checks for that.
 - Keep the default workflow token permission read-only and allow only the
   actions used here (`actions/checkout`, `actions/upload-artifact`,
   `actions/download-artifact`).
-- Use a private runner with at least 20 GiB free for the ISO build. The build
-  job defaults to `ubuntu-latest` but accepts the `PRIVATE_CI_RUNNER` repository
-  variable; set it to a private self-hosted label with enough disk. The job fails
-  early if less than 20 GiB is available.
+- Use a runner with at least 20 GiB free for the ISO build. The build job
+  defaults to `ubuntu-latest` but accepts the `PRIVATE_CI_RUNNER` repository
+  variable; set it to a self-hosted label with enough disk. The job fails early
+  if less than 20 GiB is available.
 - Configure the `private-release` environment with required reviewers, prevent
   self-review where the plan supports it, and restrict deployment to the
   protected release branch or tag.
@@ -75,7 +95,9 @@ tokens, or private-key material; the release-candidate job checks for that.
 
 GitHub Actions artifacts are a short-lived staging area, not a release archive.
 They expire, and a new run can replace a candidate. Download an approved
-candidate into private encrypted storage before its retention window ends.
+candidate into private encrypted storage before its retention window ends. A
+public-source build has no candidate to download; an approved release must be
+rebuilt through the private release path.
 
 ## Revocation
 
@@ -94,17 +116,18 @@ release record, not in a public issue or pull request.
 4. Preserve the revocation record and the checksum/signature evidence. Delete
    only the revoked artifact copies after the record is complete, or retain
    them offline as incident evidence.
-5. Rebuild from a reviewed commit, run the full private CI and checklist again,
-   and sign with a new key whose fingerprint is verified through a separate
-   channel.
+5. Rebuild from a reviewed commit, run the full CI and checklist again, and sign
+   with a new key whose fingerprint is verified through a separate channel.
 
-Revocation cannot make an already-leaked ISO safe. Because the source and
-policy may be public while artifacts are private, notify authorized users
-through the private owner channel, not through a public release page.
+Revocation cannot make an already-leaked ISO safe. Because the source and policy
+may be public while artifacts are private, notify authorized users through the
+private owner channel, not through a public release page.
 
 ## Artifact retention
 
-- **CI staging:** 14 days. Treat it as disposable; do not link to it as a
+- **Public-source CI:** no artifact retention. The ISO and logs are discarded
+  when the job ends.
+- **Private CI staging:** 14 days. Treat it as disposable; do not link to it as a
   release.
 - **Private release candidate:** 90 days in GitHub Actions, then deleted unless
   moved to private encrypted storage. The environment approval is not a release

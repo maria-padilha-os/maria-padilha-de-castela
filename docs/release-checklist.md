@@ -24,7 +24,7 @@ in a public issue, pull request, page, or chat.
 
 - [ ] The commit is reviewed and on the protected release branch/tag.
 - [ ] `bash tests/all.sh` passes at that commit.
-- [ ] The private-repository access guard passed for the build run.
+- [ ] The access guard passed for the build run, and the run was in private-repository mode (public-source builds retain no candidate).
 - [ ] The CI run id and workflow ref match the approved commit.
 - [ ] The ISO, `SHA256SUMS`, serial log, and `build-metadata.txt` come from that
       run, not from an older local build.

@@ -37,6 +37,7 @@ trap cleanup EXIT
 
 for file in \
     .github/workflows/private-ci.yml \
+    docs/adr/0002-public-source-private-release.md \
     ci/check-private-access.sh \
     ci/private-ci.sh \
     ci/qemu-smoke.sh \
@@ -178,9 +179,13 @@ for job_name, job in jobs.items():
         ):
             check(forbidden not in blob, f"job {job_name} contains forbidden action: {forbidden}")
 
-access_runs = "\n".join(str(step.get("run", "")) for step in (jobs.get("access-guard") or {}).get("steps", []))
+access_job = jobs.get("access-guard") or {}
+access_runs = "\n".join(str(step.get("run", "")) for step in access_job.get("steps", []))
 check("ci/check-private-access.sh" in access_runs, "access guard does not run ci/check-private-access.sh")
 check("--online" in access_runs, "access guard does not perform the online check")
+access_outputs = access_job.get("outputs") or {}
+check("mode" in access_outputs, "access guard does not expose the detected mode")
+check("artifact_retention" in access_outputs, "access guard does not expose the retention decision")
 
 test_runs = "\n".join(str(step.get("run", "")) for step in (jobs.get("static-tests") or {}).get("steps", []))
 check("tests/all.sh" in test_runs, "static-tests does not run tests/all.sh")
@@ -188,6 +193,13 @@ check("tests/all.sh" in test_runs, "static-tests does not run tests/all.sh")
 build_job = jobs.get("build-and-smoke") or {}
 build_runs = "\n".join(str(step.get("run", "")) for step in build_job.get("steps", []))
 check("ci/private-ci.sh" in build_runs, "build job does not run ci/private-ci.sh")
+build_needs = build_job.get("needs", [])
+if isinstance(build_needs, str):
+    build_needs = [build_needs]
+check("access-guard" in build_needs, "build job does not depend on the access guard")
+check("static-tests" in build_needs, "build job does not depend on the static tests")
+check(any("Public-source mode" in str(step.get("run", "")) for step in build_job.get("steps", [])),
+      "build job has no public-source discard step")
 
 uploads = []
 for job_name, job in jobs.items():
@@ -204,6 +216,13 @@ for job_name, step in uploads:
     for required in ("out/*.iso", "out/SHA256SUMS", "out/qemu-serial.log", "out/build-metadata.txt"):
         check(required in paths, f"{job_name} upload is missing {required}")
 
+ordinary_uploads = [step for job_name, step in uploads if job_name == "build-and-smoke"]
+check(len(ordinary_uploads) == 1, "expected one ordinary artifact upload")
+for step in ordinary_uploads:
+    step_if = str(step.get("if", ""))
+    check("needs.access-guard.outputs.mode == 'private'" in step_if,
+          "ordinary artifact upload is not gated to private-repository mode")
+
 candidate = jobs.get("private-release-candidate") or {}
 candidate_needs = candidate.get("needs", [])
 if isinstance(candidate_needs, str):
@@ -213,6 +232,12 @@ check(candidate.get("environment") == "private-release", "release candidate is n
 candidate_if = str(candidate.get("if", ""))
 check("workflow_dispatch" in candidate_if and "release_candidate" in candidate_if,
       "release candidate is not manual release_candidate only")
+check("needs.access-guard.outputs.mode == 'private'" in candidate_if,
+      "release candidate is not gated to private-repository mode")
+candidate_needs = candidate.get("needs", [])
+if isinstance(candidate_needs, str):
+    candidate_needs = [candidate_needs]
+check("access-guard" in candidate_needs, "release candidate does not depend on the access guard")
 check(any("actions/download-artifact@" in str(step.get("uses", "")) for step in candidate.get("steps", [])),
       "release candidate does not download the verified CI artifact")
 
@@ -353,37 +378,59 @@ for term in './build.sh' 'record-checksums.sh' 'verify-checksums.sh' 'qemu-smoke
     fi
 done
 
-# Access guard: private passes; public, Pages, missing fields, and public
-# visibility all fail closed. No network or token is used.
+# Access guard: public-source and private-repository modes pass; Pages,
+# releases, inconsistent metadata, and missing fields fail closed. Online checks
+# use a stubbed gh, so no network or token is used.
 make_event() {
     local path="$1" private="$2" visibility="$3" pages="$4"
     printf '{"repository":{"private":%s,"visibility":%s,"has_pages":%s}}\n' \
         "$private" "$visibility" "$pages" >"$path"
 }
 
+guard_offline() {
+    bash ci/check-private-access.sh --event "$1"
+}
+
 make_event "$scratch/private.json" true '"private"' false
-if bash ci/check-private-access.sh --event "$scratch/private.json" >"$scratch/guard-private.out" 2>&1; then
-    ok "access guard accepts a private repository with Pages disabled"
+if output="$(guard_offline "$scratch/private.json" 2>&1)"; then
+    if grep -qF 'detected state: repository=private' <<<"$output" &&
+        grep -qF 'artifact upload=private-only' <<<"$output"; then
+        ok "access guard accepts a private repository and allows private retention"
+    else
+        bad "access guard did not print the private state and allowed actions"
+    fi
 else
     bad "access guard rejected a valid private repository"
 fi
 
 make_event "$scratch/public.json" false '"public"' false
-if bash ci/check-private-access.sh --event "$scratch/public.json" >"$scratch/guard-public.out" 2>&1; then
-    bad "access guard accepted a public repository"
-elif grep -qi 'not private' "$scratch/guard-public.out"; then
-    ok "access guard rejects a public repository"
+if output="$(guard_offline "$scratch/public.json" 2>&1)"; then
+    if grep -qF 'detected state: repository=public' <<<"$output" &&
+        grep -qF 'artifact upload=no' <<<"$output"; then
+        ok "access guard accepts public source and forbids artifact retention"
+    else
+        bad "access guard did not print the public state and allowed actions"
+    fi
 else
-    bad "access guard rejected a public repository for the wrong reason"
+    bad "access guard rejected a valid public-source repository"
+fi
+
+mode_output="$scratch/guard-mode.txt"
+if GITHUB_OUTPUT="$mode_output" guard_offline "$scratch/public.json" >/dev/null 2>&1 &&
+    grep -qx 'mode=public' "$mode_output" &&
+    grep -qx 'artifact_retention=none' "$mode_output"; then
+    ok "access guard exports the public mode and retention decision"
+else
+    bad "access guard did not export the public workflow outputs"
 fi
 
 make_event "$scratch/visibility.json" true '"public"' false
 if bash ci/check-private-access.sh --event "$scratch/visibility.json" >"$scratch/guard-visibility.out" 2>&1; then
-    bad "access guard accepted public visibility"
+    bad "access guard accepted inconsistent public visibility"
 elif grep -qi 'visibility' "$scratch/guard-visibility.out"; then
-    ok "access guard rejects public visibility"
+    ok "access guard rejects inconsistent visibility"
 else
-    bad "access guard rejected public visibility for the wrong reason"
+    bad "access guard rejected inconsistent visibility for the wrong reason"
 fi
 
 make_event "$scratch/pages.json" true '"private"' true
@@ -408,10 +455,99 @@ else
     ok "access guard rejects a missing event payload"
 fi
 
-if bash ci/check-private-access.sh --help >/dev/null 2>&1; then
-    ok "access guard help"
+# Stubbed GitHub API responses for the online guard. The fake gh only serves the
+# repository metadata and release list the guard asks for.
+mock_bin="$scratch/mock-bin"
+mkdir -p "$mock_bin"
+cat >"$mock_bin/gh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ "${1:-}" == "api" ]] || {
+    printf 'unexpected gh invocation: %s\n' "$*" >&2
+    exit 1
+}
+endpoint="${2:-}"
+jq_expr="${4:-}"
+
+case "$endpoint" in
+    repos/stub/repo)
+        case "$jq_expr" in
+            .private) printf '%s\n' "${STUB_PRIVATE:?STUB_PRIVATE is not set}" ;;
+            .visibility) printf '%s\n' "${STUB_VISIBILITY:?STUB_VISIBILITY is not set}" ;;
+            .has_pages) printf '%s\n' "${STUB_PAGES:?STUB_PAGES is not set}" ;;
+            *)
+                printf 'unexpected jq expression: %s\n' "$jq_expr" >&2
+                exit 1
+                ;;
+        esac
+        ;;
+    'repos/stub/repo/releases?per_page=100')
+        printf '%s\n' "${STUB_RELEASES:-0}"
+        ;;
+    *)
+        printf 'unexpected API endpoint: %s\n' "$endpoint" >&2
+        exit 1
+        ;;
+esac
+SH
+chmod +x "$mock_bin/gh"
+
+guard_online() {
+    local event="$1" private="$2" visibility="$3" pages="$4" releases="$5"
+    env PATH="$mock_bin:$PATH" \
+        GH_TOKEN=stub-token \
+        STUB_PRIVATE="$private" \
+        STUB_VISIBILITY="$visibility" \
+        STUB_PAGES="$pages" \
+        STUB_RELEASES="$releases" \
+        bash ci/check-private-access.sh --event "$event" --repo stub/repo --online
+}
+
+if output="$(guard_online "$scratch/public.json" false public false 0 2>&1)"; then
+    if grep -qF 'detected state: repository=public' <<<"$output" &&
+        grep -qF 'artifact upload=no' <<<"$output"; then
+        ok "online guard accepts a stubbed public repository and forbids retention"
+    else
+        bad "online public guard did not print the expected state and actions"
+    fi
 else
-    bad "access guard help failed"
+    bad "online guard rejected a stubbed public repository"
+fi
+
+if output="$(guard_online "$scratch/private.json" true private false 0 2>&1)"; then
+    if grep -qF 'detected state: repository=private' <<<"$output" &&
+        grep -qF 'artifact upload=private-only' <<<"$output"; then
+        ok "online guard accepts a stubbed private repository and allows retention"
+    else
+        bad "online private guard did not print the expected state and actions"
+    fi
+else
+    bad "online guard rejected a stubbed private repository"
+fi
+
+if output="$(guard_online "$scratch/pages.json" false public true 0 2>&1)"; then
+    bad "online guard accepted a stubbed Pages site"
+elif grep -qi 'Pages' <<<"$output"; then
+    ok "online guard rejects a stubbed Pages site"
+else
+    bad "online guard rejected Pages for the wrong reason"
+fi
+
+if output="$(guard_online "$scratch/private.json" true private false 2 2>&1)"; then
+    bad "online guard accepted a stubbed published release"
+elif grep -qi 'Release' <<<"$output"; then
+    ok "online guard rejects a stubbed published release"
+else
+    bad "online guard rejected a published release for the wrong reason"
+fi
+
+if output="$(guard_online "$scratch/public.json" true private false 0 2>&1)"; then
+    bad "online guard ignored event/API visibility disagreement"
+elif grep -qi 'refusing to guess' <<<"$output"; then
+    ok "online guard fails closed when event and API visibility disagree"
+else
+    bad "online guard rejected a visibility disagreement for the wrong reason"
 fi
 
 # The docs must state the human approval, offline key, revocation, and retention
@@ -421,8 +557,13 @@ for term in 'explicit human approval' 'private signing key' 'offline' 'revocatio
     require_text docs/release-checklist.md "$term"
 done
 for term in 'private repository' 'artifact' 'retention' 'revocation' 'Pages' \
-    'public release' 'unauthenticated' '14 days' '90 days'; do
+    'public release' 'unauthenticated' '14 days' '90 days' 'public source' \
+    'no artifact retention' 'registry'; do
     require_text docs/private-ci.md "$term"
+done
+for term in 'private repository' 'public source' 'no artifact retention' \
+    'private mirror' 'Pages' 'release' 'registry' 'authorized-use boundary'; do
+    require_text docs/adr/0002-public-source-private-release.md "$term"
 done
 
 # The serial smoke marker must be part of the image boot configuration.

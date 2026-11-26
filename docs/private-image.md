@@ -11,11 +11,13 @@ Maria Padilha de Castela is a **private release** image.
   the private release record.
 - Do not add a public release workflow to `.github/`. The repository has no
   public artifact channel by design.
-- Private CI may retain build artifacts only through the private repository's
-  own access control. CI artifacts are staging, not releases: ordinary artifacts
-  expire after 14 days and an approved private release candidate after 90 days.
-  The [private CI document](private-ci.md) records the access rules, retention,
-  and revocation procedure.
+- CI has a public-source mode and a private-repository mode. Public-source CI
+  runs the static checks and the container build but retains no ISO or log. A
+  private repository may retain build artifacts only through its own access
+  control. CI artifacts are staging, not releases: ordinary artifacts expire
+  after 14 days and an approved private release candidate after 90 days. The
+  [private CI document](private-ci.md) records the access rules, retention, and
+  revocation procedure.
 
 The private release record belongs outside this checkout and should contain:
 

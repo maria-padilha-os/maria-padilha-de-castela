@@ -23,8 +23,9 @@ an offline-safe Calamares packagechooser for the optional authorized tool groups
 The exclusive security tabs live in [`frontend/cyber/`](frontend/cyber/README.md)
 and are copied into the image at `/usr/share/maria-padilha/cyber/`. The static
 tests run anywhere; the ISO is built only inside an Arch container, and
-[`build.sh`](build.sh) refuses to run on a host. Private CI keeps the ISO in
-repository-scoped artifacts and never publishes it.
+[`build.sh`](build.sh) refuses to run on a host. CI builds and smoke-tests in
+both public-source and private-repository modes; only a private repository may
+retain the ISO in repository-scoped artifacts, and nothing is ever published.
 
 Read next:
 
@@ -36,6 +37,7 @@ Read next:
 - [Wireshark/forensics capabilities and revocation](docs/policy/forensics-capabilities.md)
 - [Isolated lab/VM network and snapshot policy](docs/policy/lab-vm-isolation.md)
 - [Legal, licensing, and export considerations](docs/policy/legal-licensing-export.md)
+- [Public source, private release, and CI retention decision](docs/adr/0002-public-source-private-release.md)
 - [Private CI and artifact handling](docs/private-ci.md)
 - [Private release checklist](docs/release-checklist.md)
 - [Reference build](build/README.md)
@@ -71,9 +73,10 @@ installed on the host and the live root does not install packages at boot.
 | `frontend/cyber/` | source for the exclusive cyber frontend, manifest, and tests |
 | `iso/airootfs/` | authorized-use banner, live user, greetd, enabled units, mkinitcpio |
 | `iso/efiboot/`, `iso/syslinux/` | UEFI and BIOS boot entries |
-| `.github/workflows/private-ci.yml` | private-repository-only build, tests, QEMU serial smoke boot, artifact retention |
+| `.github/workflows/private-ci.yml` | mode-aware build, tests, QEMU serial smoke boot, private-only artifact retention |
 | `ci/` | access guard, checksum recording/verification, QEMU smoke boot, CI entry point |
-| `docs/private-ci.md` | CI access rules, artifact handling, retention, and revocation |
+| `docs/adr/0002-public-source-private-release.md` | public-source, no-artifact-retention decision and alternatives |
+| `docs/private-ci.md` | CI access rules, public/private modes, artifact handling, retention, and revocation |
 | `docs/release-checklist.md` | explicit human approval and offline private-key release procedure |
 | `build.sh` | container-only mkarchiso wrapper |
 | `tests/iso.sh` | profile, package, secret, and public-release checks |
@@ -229,19 +232,26 @@ record outside this repository, never in a public release.
 
 ## Private CI and release
 
-[`.github/workflows/private-ci.yml`](.github/workflows/private-ci.yml) refuses to
-run unless the repository is private, GitHub Pages is disabled, and there is no
-published GitHub Release. It runs `tests/all.sh`, builds the ISO in a disposable
-Arch container, records `SHA256SUMS`, boots the exact ISO in QEMU with no
-network and a serial console, and uploads the ISO, checksum, serial log, and
-build metadata only as repository-scoped GitHub Actions artifacts. There is no
-Pages job, GitHub Release, package mirror, registry push, or unauthenticated
-artifact URL. The workflow token is read-only.
+[`.github/workflows/private-ci.yml`](.github/workflows/private-ci.yml) detects
+whether the repository is public or private, refuses GitHub Pages and published
+GitHub Releases in both modes, and never weakens the artifact boundary. It runs
+`tests/all.sh`, builds the ISO in a disposable Arch container, records
+`SHA256SUMS`, and boots the exact ISO in QEMU with no network and a serial
+console.
 
-Ordinary CI artifacts are retained for 14 days. A manual release-candidate run
-can re-retain a verified artifact for 90 days behind the `private-release`
-environment, which must be configured with required reviewers. That artifact is
-**not signed and not a release**.
+On a **public repository**, the build and smoke test run but the ISO, checksum,
+serial log, and metadata are discarded: there is no artifact upload. On a
+**private repository**, the same files may be uploaded as repository-scoped
+GitHub Actions artifacts. There is no Pages job, GitHub Release, package mirror,
+registry push, or unauthenticated artifact URL. The workflow token is read-only.
+See [ADR 0002](docs/adr/0002-public-source-private-release.md).
+
+In private-repository mode, ordinary CI artifacts are retained for 14 days. A
+manual release-candidate run can re-retain a verified artifact for 90 days
+behind the `private-release` environment, which must be configured with required
+reviewers. That artifact is **not signed and not a release**. Public-source
+builds have no candidate to download; an approved release must be rebuilt
+through the private release path.
 
 A real release requires [the private release checklist](docs/release-checklist.md):
 explicit human approval recorded outside this checkout, an offline

@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# Fail closed unless this is a private repository with no public channels.
+# Guard the boundary between public source and private build artifacts.
 #
-# The event-payload checks are local and require no network. --online adds a
-# read-only GitHub API check for repository visibility, GitHub Pages, and
-# published releases. No token, key, or artifact URL is printed.
+# Public-source mode permits the static checks and the container build, but not
+# artifact upload or retention. Private-repository mode additionally permits
+# repository-scoped GitHub Actions artifacts. Both modes fail closed for GitHub
+# Pages, published GitHub Releases, inconsistent metadata, and an unavailable
+# online check. No token, key, or artifact URL is printed.
 set -Eeuo pipefail
 
 script_name="${0##*/}"
 event_path="${GITHUB_EVENT_PATH:-}"
 repository="${GITHUB_REPOSITORY:-}"
 online=0
+mode=""
 
 log() { printf '[access-guard] %s\n' "$*" >&2; }
 die() { printf '[access-guard] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -18,8 +21,9 @@ usage() {
     cat <<EOF
 usage: $script_name [--event PATH] [--repo OWNER/NAME] [--online]
 
-Refuse to build or retain private artifacts unless the repository is private,
-GitHub Pages is disabled, and there is no published GitHub Release.
+Detect public-source or private-repository mode and allow only the matching
+build actions. Both modes refuse GitHub Pages, published GitHub Releases, and
+registry publication.
 
   --event PATH    GitHub event JSON (default: \$GITHUB_EVENT_PATH)
   --repo OWNER/NAME  repository (default: \$GITHUB_REPOSITORY)
@@ -27,7 +31,10 @@ GitHub Pages is disabled, and there is no published GitHub Release.
                   GH_TOKEN with read access
   -h, --help      show this help
 
-The default is offline so the check can be unit-tested without a token.
+In public-source mode, static checks and the container build are allowed but
+artifact upload is not. In private-repository mode, repository-scoped Actions
+artifact retention is also allowed. The default is offline so the check can be
+unit-tested without a token.
 EOF
 }
 
@@ -90,13 +97,27 @@ print(value("private"), value("visibility"), value("has_pages"))
 PY
 ) || die "could not parse event payload: $event_path"
 
-[[ "$event_private" == "true" ]] ||
-    die "repository is not private (repository.private='${event_private:-missing}'); refusing to build or retain artifacts"
-[[ "$event_visibility" == "private" ]] ||
-    die "repository visibility is not private (repository.visibility='${event_visibility:-missing}')"
+# A public source repository and a private repository are the only supported
+# modes. A missing or contradictory pair is refused rather than guessed.
+case "$event_private:$event_visibility" in
+    true:private)
+        event_mode=private
+        ;;
+    false:public)
+        event_mode=public
+        ;;
+    *)
+        die "repository visibility is missing or inconsistent (repository.private='${event_private:-missing}', repository.visibility='${event_visibility:-missing}'); refusing to build"
+        ;;
+esac
+
 [[ "$event_has_pages" == "false" ]] ||
-    die "GitHub Pages is enabled (repository.has_pages='${event_has_pages:-missing}'); disable Pages before private CI"
-log "event payload confirms a private repository with Pages disabled"
+    die "GitHub Pages is enabled or unknown (repository.has_pages='${event_has_pages:-missing}'); disable Pages before CI"
+log "event payload confirms ${event_mode} source with Pages disabled"
+
+mode="$event_mode"
+visibility="$event_visibility"
+release_state="unchecked (offline)"
 
 if ((online == 1)); then
     [[ -n "$repository" ]] || die "GITHUB_REPOSITORY is not set; --online needs OWNER/NAME"
@@ -113,12 +134,52 @@ if ((online == 1)); then
         --jq '[.[] | select(.draft == false)] | length' 2>/dev/null)" ||
         die "could not read the release list through the GitHub API"
 
-    [[ "$api_private" == "true" ]] || die "GitHub API says the repository is not private"
-    [[ "$api_visibility" == "private" ]] || die "GitHub API says visibility is '${api_visibility:-unknown}', not private"
-    [[ "$api_pages" == "false" ]] || die "GitHub API says Pages is still enabled; disable it first"
+    case "$api_private:$api_visibility" in
+        true:private)
+            api_mode=private
+            ;;
+        false:public)
+            api_mode=public
+            ;;
+        *)
+            die "GitHub API visibility is missing or unsupported (private='${api_private:-unknown}', visibility='${api_visibility:-unknown}'); refusing to build"
+            ;;
+    esac
+
+    [[ "$api_mode" == "$event_mode" ]] ||
+        die "event payload says ${event_mode} but the GitHub API says ${api_mode}; refusing to guess"
+    [[ "$api_pages" == "false" ]] ||
+        die "GitHub API says Pages is enabled or unknown; disable it first"
+    [[ "$published_releases" =~ ^[0-9]+$ ]] ||
+        die "could not parse the published release count through the GitHub API"
     [[ "$published_releases" == "0" ]] ||
-        die "repository has ${published_releases:-unknown} published GitHub Release(s); remove the public release channel first"
-    log "GitHub API confirms private visibility, Pages disabled, and no published releases"
+        die "repository has ${published_releases} published GitHub Release(s); remove the public release channel first"
+    log "GitHub API confirms ${api_mode} visibility, Pages disabled, and no published releases"
+
+    mode="$api_mode"
+    visibility="$api_visibility"
+    release_state="$published_releases"
 fi
 
-log "private access check passed"
+if [[ "$mode" == "private" ]]; then
+    artifact_upload="private-only"
+    artifact_retention="private"
+else
+    artifact_upload="no"
+    artifact_retention="none"
+fi
+
+log "detected state: repository=${mode}; visibility=${visibility}; Pages=disabled; published releases=${release_state}"
+log "allowed actions: static checks=yes; container build=yes; artifact upload=${artifact_upload}; Pages=no; releases=no; registry publication=no"
+
+if [[ "$mode" == "public" ]]; then
+    log "public-source access check passed; built artifacts are not retained"
+else
+    log "private access check passed; repository-scoped artifact retention is allowed"
+fi
+
+# Let the workflow branch on the detected mode without parsing log text.
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    printf 'mode=%s\n' "$mode" >>"$GITHUB_OUTPUT"
+    printf 'artifact_retention=%s\n' "$artifact_retention" >>"$GITHUB_OUTPUT"
+fi

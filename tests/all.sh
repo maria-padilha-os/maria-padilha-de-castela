@@ -26,6 +26,7 @@ require_text() {
 for f in \
   README.md \
   docs/adr/0001-cybersecurity-os-base.md \
+  docs/adr/0002-public-source-private-release.md \
   docs/policy/authorized-use.md \
   docs/policy/legal-licensing-export.md \
   build/README.md \
@@ -113,6 +114,21 @@ for term in \
   'Reference build'
 do
   require_text "$adr" "$term"
+done
+
+# The public-source decision must compare the retention alternatives.
+decision=docs/adr/0002-public-source-private-release.md
+for term in \
+  'private repository' \
+  'public source' \
+  'no artifact retention' \
+  'private mirror' \
+  'Pages' \
+  'release' \
+  'registry' \
+  'authorized-use boundary'
+do
+  require_text "$decision" "$term"
 done
 
 # Authorized-use boundary
